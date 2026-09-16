@@ -5,10 +5,10 @@ namespace Triki.Core
         /// <summary>Los jugadores colocan sus fichas por turnos hasta agotar las de su mano.</summary>
         Placement,
 
-        /// <summary>Todas las fichas están en el tablero; se mueven por las aristas (pendiente).</summary>
+        /// <summary>Todas las fichas están en el tablero; cada turno se mueve una por una arista.</summary>
         Movement,
 
-        /// <summary>Un jugador hizo línea. Solo se sale con <see cref="TrikiGame.Reset"/>.</summary>
+        /// <summary>Hay ganador. Solo se sale con <see cref="TrikiGame.Reset"/>.</summary>
         GameOver,
     }
 }
