@@ -42,6 +42,7 @@ namespace Triki.Gameplay
                 return;
 
             _game.PiecePlaced += HandlePiecePlaced;
+            _game.GameWon += HandleGameWon;
             _game.GameReset += HandleGameReset;
             _pressAction.performed += HandlePress;
             _pressAction.Enable();
@@ -55,6 +56,7 @@ namespace Triki.Gameplay
             _pressAction.Disable();
             _pressAction.performed -= HandlePress;
             _game.PiecePlaced -= HandlePiecePlaced;
+            _game.GameWon -= HandleGameWon;
             _game.GameReset -= HandleGameReset;
         }
 
@@ -65,6 +67,13 @@ namespace Triki.Gameplay
 
         private void HandlePress(InputAction.CallbackContext context)
         {
+            // TEMPORAL hasta tener UI: con la partida terminada, cualquier clic la reinicia.
+            if (_game.Phase == GamePhase.GameOver)
+            {
+                _game.Reset();
+                return;
+            }
+
             var pointer = Pointer.current;
             if (pointer == null)
                 return;
@@ -76,6 +85,8 @@ namespace Triki.Gameplay
         }
 
         private void HandlePiecePlaced(int cell, Player player) => _boardView.ShowPiece(cell, player);
+
+        private void HandleGameWon(Player winner, BoardLine line) => _boardView.ShowWin(line, winner);
 
         private void HandleGameReset() => _boardView.ClearPieces();
     }
