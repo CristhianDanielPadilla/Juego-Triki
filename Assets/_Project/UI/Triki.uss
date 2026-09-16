@@ -97,6 +97,45 @@
     background-color: rgb(255, 118, 110);
 }
 
+/* ---------- Nueva partida ---------- */
+
+.option-label {
+    font-size: 26px;
+    color: var(--color-muted);
+    margin: 16px 0 8px 0;
+}
+
+.segmented {
+    flex-direction: row;
+}
+
+.segment {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 64px;
+    margin: 0 3px;
+    font-size: 28px;
+    color: var(--color-text);
+    background-color: var(--color-button);
+    border-width: 0;
+    border-radius: 12px;
+}
+
+.segment:hover {
+    background-color: var(--color-button-hover);
+}
+
+.segment--selected,
+.segment--selected:hover {
+    color: var(--color-background);
+    background-color: var(--color-text);
+    -unity-font-style: bold;
+}
+
+.setup-start {
+    margin-top: 32px;
+}
+
 /* ---------- Histórico ---------- */
 
 .stat-total {
