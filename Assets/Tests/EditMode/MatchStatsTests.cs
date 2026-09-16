@@ -46,9 +46,10 @@ namespace Triki.Tests
         {
             var stats = new MatchStats();
 
-            stats.Restore(5, 3, 2, 2, 3);
+            stats.Restore(6, 1, 3, 2, 2, 3);
 
-            Assert.AreEqual(5, stats.GamesPlayed);
+            Assert.AreEqual(6, stats.GamesPlayed);
+            Assert.AreEqual(1, stats.Draws);
             Assert.AreEqual(3, stats.GetWins(Player.One));
             Assert.AreEqual(2, stats.GetLosses(Player.One));
             Assert.AreEqual(2, stats.GetWins(Player.Two));
@@ -57,15 +58,32 @@ namespace Triki.Tests
             stats.Clear();
 
             Assert.AreEqual(0, stats.GamesPlayed);
+            Assert.AreEqual(0, stats.Draws);
             Assert.AreEqual(0, stats.GetWins(Player.One));
         }
 
-        [Test]
-        public void Restore_Negative_Throws()
+        [TestCase(-1, 0, 0), TestCase(1, -1, 0), TestCase(1, 0, -1)]
+        public void Restore_Negative_Throws(int games, int draws, int oneWins)
         {
             var stats = new MatchStats();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => stats.Restore(1, -1, 0, 0, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => stats.Restore(games, draws, oneWins, 0, 0, 0));
+        }
+
+        [Test]
+        public void RecordDraw_CountsGame_WithoutWinsOrLosses()
+        {
+            var stats = new MatchStats();
+
+            stats.RecordDraw();
+            stats.RecordWin(Player.Two);
+
+            Assert.AreEqual(2, stats.GamesPlayed);
+            Assert.AreEqual(1, stats.Draws);
+            Assert.AreEqual(0, stats.GetWins(Player.One));
+            Assert.AreEqual(1, stats.GetLosses(Player.One));
+            Assert.AreEqual(1, stats.GetWins(Player.Two));
+            Assert.AreEqual(0, stats.GetLosses(Player.Two));
         }
     }
 }

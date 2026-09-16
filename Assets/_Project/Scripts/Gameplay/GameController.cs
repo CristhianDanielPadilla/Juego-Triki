@@ -53,6 +53,7 @@ namespace Triki.Gameplay
             _game.PiecePlaced += HandlePiecePlaced;
             _game.PieceMoved += HandlePieceMoved;
             _game.GameWon += HandleGameWon;
+            _game.GameDrawn += HandleGameDrawn;
             _game.GameReset += HandleGameReset;
             _pressAction.performed += HandlePress;
             _pressAction.Enable();
@@ -68,6 +69,7 @@ namespace Triki.Gameplay
             _game.PiecePlaced -= HandlePiecePlaced;
             _game.PieceMoved -= HandlePieceMoved;
             _game.GameWon -= HandleGameWon;
+            _game.GameDrawn -= HandleGameDrawn;
             _game.GameReset -= HandleGameReset;
         }
 
@@ -138,6 +140,13 @@ namespace Triki.Gameplay
         {
             ClearSelection();
             _boardView.MovePiece(from, to);
+        }
+
+        private void HandleGameDrawn(DrawReason reason)
+        {
+            _stats.RecordDraw();
+            _statsRepository.Save(_stats);
+            ClearSelection();
         }
 
         private void HandleGameWon(Player winner, WinReason reason)

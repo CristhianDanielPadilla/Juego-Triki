@@ -11,6 +11,8 @@ namespace Triki.Core
     /// </list>
     /// Gana quien alinee sus 3 fichas en una recta unida por aristas (en cualquier fase), o
     /// quien deje al rival sin movimientos cuando le toca mover.
+    /// En la fase de movimiento hay empate si una posición se repite o se agota el límite
+    /// de movimientos (<see cref="TrikiRules"/>).
     /// La capa visual escucha los eventos; nunca consulta el estado cada frame.
     /// </summary>
     public sealed class TrikiGame
@@ -21,14 +23,29 @@ namespace Triki.Core
         private readonly int[] _piecesPlaced = new int[3];
         private readonly BoardLine[] _winLines;
 
-        public TrikiGame() : this(BoardGraph.CreateSquare())
+        // Posiciones desde que empezó el movimiento (todas las jugadas son reversibles).
+        // Tamaño fijo: la inicial + una por movimiento permitido.
+        private readonly int[] _positionHistory;
+        private int _positionCount;
+
+        public TrikiGame() : this(BoardGraph.CreateSquare(), TrikiRules.Default)
         {
         }
 
-        public TrikiGame(BoardGraph graph)
+        public TrikiGame(TrikiRules rules) : this(BoardGraph.CreateSquare(), rules)
         {
+        }
+
+        public TrikiGame(BoardGraph graph) : this(graph, TrikiRules.Default)
+        {
+        }
+
+        public TrikiGame(BoardGraph graph, TrikiRules rules)
+        {
+            Rules = rules ?? throw new ArgumentNullException(nameof(rules));
             Board = new Board(graph);
             _winLines = BuildWinLines(graph);
+            _positionHistory = new int[rules.MaxMovementMoves + 1];
             Reset();
         }
 
@@ -46,9 +63,23 @@ namespace Triki.Core
         /// <summary>Ganador y motivo. Se emite después de <see cref="PhaseChanged"/>.</summary>
         public event Action<Player, WinReason> GameWon;
 
+        /// <summary>Empate y motivo. Se emite después de <see cref="PhaseChanged"/>.</summary>
+        public event Action<DrawReason> GameDrawn;
+
         public event Action GameReset;
 
+        public TrikiRules Rules { get; }
+
         public Board Board { get; }
+
+        /// <summary>Movimientos hechos en la fase de movimiento (de ambos jugadores).</summary>
+        public int MovementMovesPlayed { get; private set; }
+
+        /// <summary>La partida terminó sin ganador.</summary>
+        public bool IsDraw => Phase == GamePhase.GameOver && Winner == Player.None;
+
+        /// <summary>Solo tiene sentido si <see cref="IsDraw"/>.</summary>
+        public DrawReason DrawReason { get; private set; }
 
         /// <summary>A quién le toca. Al terminar la partida conserva al ganador.</summary>
         public Player CurrentPlayer { get; private set; }
@@ -117,6 +148,7 @@ namespace Triki.Core
                 if (TryWinByBlock(player))
                     return PlaceResult.Placed;
                 ChangePhase(GamePhase.Movement);
+                RecordPosition(player.Opponent());
             }
 
             PassTurn(player);
@@ -140,10 +172,24 @@ namespace Triki.Core
 
             Board.Set(from, Player.None);
             Board.Set(to, player);
+            MovementMovesPlayed++;
             PieceMoved?.Invoke(from, to, player);
 
+            // La victoria tiene prioridad sobre el empate, incluso en el último movimiento permitido.
             if (TryWinByLine(player) || TryWinByBlock(player))
                 return MoveResult.Moved;
+
+            if (RecordPosition(player.Opponent()) >= Rules.RepetitionLimit)
+            {
+                EndInDraw(DrawReason.Repetition);
+                return MoveResult.Moved;
+            }
+
+            if (MovementMovesPlayed >= Rules.MaxMovementMoves)
+            {
+                EndInDraw(DrawReason.MoveLimit);
+                return MoveResult.Moved;
+            }
 
             PassTurn(player);
             return MoveResult.Moved;
@@ -160,7 +206,39 @@ namespace Triki.Core
             Winner = Player.None;
             WinReason = default;
             WinningLine = default;
+            DrawReason = default;
+            MovementMovesPlayed = 0;
+            _positionCount = 0;
             GameReset?.Invoke();
+        }
+
+        /// <summary>
+        /// Guarda la posición actual (fichas de ambos jugadores + quién mueve) y devuelve
+        /// cuántas veces ha aparecido, incluida esta. Búsqueda lineal: son como mucho
+        /// <see cref="TrikiRules.MaxMovementMoves"/> + 1 entradas y no asigna memoria.
+        /// </summary>
+        private int RecordPosition(Player toMove)
+        {
+            var key = Board.GetMask(Player.One)
+                      | (Board.GetMask(Player.Two) << BoardGraph.CellCount)
+                      | (toMove == Player.Two ? 1 << (BoardGraph.CellCount * 2) : 0);
+
+            var occurrences = 1;
+            for (var i = 0; i < _positionCount; i++)
+            {
+                if (_positionHistory[i] == key)
+                    occurrences++;
+            }
+
+            _positionHistory[_positionCount++] = key;
+            return occurrences;
+        }
+
+        private void EndInDraw(DrawReason reason)
+        {
+            DrawReason = reason;
+            ChangePhase(GamePhase.GameOver);
+            GameDrawn?.Invoke(reason);
         }
 
         private bool TryWinByLine(Player player)

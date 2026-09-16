@@ -38,7 +38,7 @@ namespace Triki.Gameplay
                 var data = JsonUtility.FromJson<StatsData>(File.ReadAllText(FilePath));
                 if (data == null)
                     throw new FormatException("Archivo vacío.");
-                stats.Restore(data.gamesPlayed, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
+                stats.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is FormatException)
             {
@@ -57,6 +57,7 @@ namespace Triki.Gameplay
             var data = new StatsData
             {
                 gamesPlayed = stats.GamesPlayed,
+                draws = stats.Draws,
                 playerOneWins = stats.GetWins(Player.One),
                 playerOneLosses = stats.GetLosses(Player.One),
                 playerTwoWins = stats.GetWins(Player.Two),
@@ -89,6 +90,9 @@ namespace Triki.Gameplay
             // Para migrar el formato si algún día cambia.
             public int version = 1;
             public int gamesPlayed;
+
+            // Añadido después de la versión 1: los archivos anteriores no lo tienen y cargan 0.
+            public int draws;
             public int playerOneWins;
             public int playerOneLosses;
             public int playerTwoWins;

@@ -14,7 +14,7 @@ namespace Triki.Tests
 
         [TestCase("main-panel"), TestCase("history-panel")]
         [TestCase("play-button"), TestCase("history-button"), TestCase("quit-button"), TestCase("back-button")]
-        [TestCase("games-played")]
+        [TestCase("games-played"), TestCase("draws")]
         [TestCase("player-one-name"), TestCase("player-one-wins"), TestCase("player-one-losses")]
         [TestCase("player-two-name"), TestCase("player-two-wins"), TestCase("player-two-losses")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);

@@ -21,6 +21,7 @@ namespace Triki.UI
         private Button _quitButton;
         private Button _backButton;
         private Label _gamesPlayed;
+        private Label _draws;
         private Label _playerOneName;
         private Label _playerOneWins;
         private Label _playerOneLosses;
@@ -44,6 +45,7 @@ namespace Triki.UI
             _quitButton = root.Q<Button>("quit-button");
             _backButton = root.Q<Button>("back-button");
             _gamesPlayed = root.Q<Label>("games-played");
+            _draws = root.Q<Label>("draws");
             _playerOneName = root.Q<Label>("player-one-name");
             _playerOneWins = root.Q<Label>("player-one-wins");
             _playerOneLosses = root.Q<Label>("player-one-losses");
@@ -85,6 +87,7 @@ namespace Triki.UI
             // Se lee al abrir: así siempre refleja las partidas jugadas desde el último vistazo.
             var stats = new StatsRepository().Load();
             _gamesPlayed.text = stats.GamesPlayed.ToString();
+            _draws.text = stats.Draws.ToString();
             _playerOneWins.text = stats.GetWins(Player.One).ToString();
             _playerOneLosses.text = stats.GetLosses(Player.One).ToString();
             _playerTwoWins.text = stats.GetWins(Player.Two).ToString();

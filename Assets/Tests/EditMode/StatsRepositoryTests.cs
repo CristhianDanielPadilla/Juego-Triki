@@ -42,13 +42,15 @@ namespace Triki.Tests
             stats.RecordWin(Player.One);
             stats.RecordWin(Player.Two);
             stats.RecordWin(Player.Two);
+            stats.RecordDraw();
 
             _repository.Save(stats);
             var loaded = _repository.Load();
 
             Assert.IsTrue(File.Exists(_repository.FilePath));
             Assert.IsFalse(File.Exists(_repository.FilePath + ".tmp"));
-            Assert.AreEqual(3, loaded.GamesPlayed);
+            Assert.AreEqual(4, loaded.GamesPlayed);
+            Assert.AreEqual(1, loaded.Draws);
             Assert.AreEqual(1, loaded.GetWins(Player.One));
             Assert.AreEqual(2, loaded.GetLosses(Player.One));
             Assert.AreEqual(2, loaded.GetWins(Player.Two));
@@ -66,6 +68,20 @@ namespace Triki.Tests
             _repository.Save(stats);
 
             Assert.AreEqual(2, _repository.Load().GamesPlayed);
+        }
+
+        [Test]
+        public void Load_FileFromBeforeDraws_LoadsWithZeroDraws()
+        {
+            Directory.CreateDirectory(_directory);
+            File.WriteAllText(_repository.FilePath,
+                "{\"version\":1,\"gamesPlayed\":2,\"playerOneWins\":2,\"playerOneLosses\":0,\"playerTwoWins\":0,\"playerTwoLosses\":2}");
+
+            var stats = _repository.Load();
+
+            Assert.AreEqual(2, stats.GamesPlayed);
+            Assert.AreEqual(0, stats.Draws);
+            Assert.AreEqual(2, stats.GetWins(Player.One));
         }
 
         [TestCase("esto no es json", TestName = "JSON inválido")]
