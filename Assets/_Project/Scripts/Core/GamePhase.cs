@@ -7,5 +7,8 @@ namespace Triki.Core
 
         /// <summary>Todas las fichas están en el tablero; se mueven por las aristas (pendiente).</summary>
         Movement,
+
+        /// <summary>Un jugador hizo línea. Solo se sale con <see cref="TrikiGame.Reset"/>.</summary>
+        GameOver,
     }
 }

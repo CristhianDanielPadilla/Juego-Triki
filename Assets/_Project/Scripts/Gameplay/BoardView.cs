@@ -15,7 +15,8 @@ namespace Triki.Gameplay
         private const int CircleResolution = 128;
         private const int EdgeSortingOrder = 0;
         private const int NodeSortingOrder = 1;
-        private const int PieceSortingOrder = 2;
+        private const int WinLineSortingOrder = 2;
+        private const int PieceSortingOrder = 3;
 
         [Header("Layout (unidades de mundo)")]
         [SerializeField, Min(0.5f)] private float _spacing = 3f;
@@ -24,6 +25,10 @@ namespace Triki.Gameplay
         [SerializeField, Min(0.01f)] private float _edgeThickness = 0.08f;
         [Tooltip("Radio de selección alrededor de cada casilla, como fracción de la separación.")]
         [SerializeField, Range(0.1f, 0.5f)] private float _pickRadius = 0.45f;
+
+        [Header("Victoria")]
+        [SerializeField, Min(0.01f)] private float _winLineThickness = 0.3f;
+        [SerializeField, Min(1f)] private float _winPieceScale = 1.2f;
 
         [Header("Sprites (opcionales: si faltan se generan en runtime)")]
         [SerializeField] private Sprite _circleSprite;
@@ -38,6 +43,7 @@ namespace Triki.Gameplay
         private readonly SpriteRenderer[] _pieceAtCell = new SpriteRenderer[BoardGraph.CellCount];
         private readonly SpriteRenderer[] _piecePool = new SpriteRenderer[TrikiGame.PiecesPerPlayer * 2];
         private int _piecesInUse;
+        private SpriteRenderer _winLine;
 
         private Sprite _ownedCircle;
         private Sprite _ownedLine;
@@ -82,6 +88,9 @@ namespace Triki.Gameplay
                 node.transform.localScale = new Vector3(_nodeDiameter, _nodeDiameter, 1f);
             }
 
+            _winLine = CreateRenderer("Win Line", transform, line, Color.white, WinLineSortingOrder);
+            _winLine.enabled = false;
+
             var piecesRoot = CreateGroup("Pieces");
             for (var i = 0; i < _piecePool.Length; i++)
             {
@@ -101,18 +110,47 @@ namespace Triki.Gameplay
 
             var piece = _piecePool[_piecesInUse++];
             piece.transform.localPosition = GetCellLocalPosition(cell);
-            piece.color = player == Player.One ? _playerOneColor : _playerTwoColor;
+            piece.color = GetPlayerColor(player);
             piece.enabled = true;
             _pieceAtCell[cell] = piece;
         }
 
+        /// <summary>Resalta la línea ganadora de extremo a extremo y agranda sus fichas.</summary>
+        public void ShowWin(BoardLine line, Player winner)
+        {
+            var from = GetCellLocalPosition(line.A);
+            var to = GetCellLocalPosition(line.C);
+            var delta = to - from;
+
+            var t = _winLine.transform;
+            t.localPosition = (from + to) * 0.5f;
+            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+            t.localScale = new Vector3(delta.magnitude, _winLineThickness, 1f);
+            _winLine.color = GetPlayerColor(winner);
+            _winLine.enabled = true;
+
+            var winScale = _pieceDiameter * _winPieceScale;
+            SetPieceScale(line.A, winScale);
+            SetPieceScale(line.B, winScale);
+            SetPieceScale(line.C, winScale);
+        }
+
+        /// <summary>Oculta fichas y resaltado; deja el tablero listo para otra partida.</summary>
         public void ClearPieces()
         {
+            var baseScale = new Vector3(_pieceDiameter, _pieceDiameter, 1f);
             for (var i = 0; i < _piecePool.Length; i++)
             {
-                if (_piecePool[i] != null)
-                    _piecePool[i].enabled = false;
+                var piece = _piecePool[i];
+                if (piece == null)
+                    continue;
+                piece.enabled = false;
+                piece.transform.localScale = baseScale;
             }
+
+            if (_winLine != null)
+                _winLine.enabled = false;
+
             Array.Clear(_pieceAtCell, 0, _pieceAtCell.Length);
             _piecesInUse = 0;
         }
@@ -152,6 +190,15 @@ namespace Triki.Gameplay
         {
             SpriteFactory.Release(_ownedCircle);
             SpriteFactory.Release(_ownedLine);
+        }
+
+        private Color GetPlayerColor(Player player) => player == Player.One ? _playerOneColor : _playerTwoColor;
+
+        private void SetPieceScale(int cell, float diameter)
+        {
+            var piece = _pieceAtCell[cell];
+            if (piece != null)
+                piece.transform.localScale = new Vector3(diameter, diameter, 1f);
         }
 
         private Transform CreateGroup(string groupName)
