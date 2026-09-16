@@ -1,0 +1,17 @@
+{
+    "name": "Triki.UI",
+    "rootNamespace": "Triki.UI",
+    "references": [
+        "Triki.Core",
+        "Triki.Gameplay"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
