@@ -57,3 +57,23 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   `"C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe" -batchmode -nographics -projectPath <ruta> -runTests -testPlatform EditMode -testResults <xml> -logFile <log>`
 - El proyecto NO se puede editar por fuera mientras el editor de Unity esta abierto:
   `ProjectSettings/*.asset` y las escenas los reescribe Unity al guardar/cerrar.
+
+## Flujo de trabajo (GitHub Flow)
+
+- `main` siempre compila, pasa los tests y es jugable. Nada se sube directo a `main`.
+  - GitHub no permite proteger ramas en repos privados con el plan gratuito; lo bloquea un hook
+    local `.git/hooks/pre-push` (tambien ejecuta Git LFS). Los hooks no se versionan: en un clon
+    nuevo hay que volver a crearlo.
+- Cada tarea:
+  1. `git switch main` y `git pull --ff-only`.
+  2. Rama corta: `feature/<tema>`, `fix/<tema>`, `docs/<tema>` o `chore/<tema>`.
+  3. Commits pequeños; tests EditMode en verde antes de abrir el PR.
+  4. PR a `main`, merge con **merge commit** (squash/rebase cambian los SHA y rompen ramas
+     apiladas encima) y borrar la rama.
+- **Cambiar de rama o hacer pull con Unity CERRADO** si cambian assets: git reescribe escenas,
+  settings y `manifest.json` bajo el editor. Ojo: `git switch main` con un `main` local
+  desactualizado deja el disco en la version vieja hasta hacer el pull.
+- Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
+  ligada a la version del editor: actualizarla si cambia Unity).
+- Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
+- Proximas ramas previstas: regla de empate, IA oponente, pantallas adaptables, arte y audio.
