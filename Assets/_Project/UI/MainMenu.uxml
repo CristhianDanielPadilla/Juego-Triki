@@ -9,6 +9,30 @@
             <ui:Button name="quit-button" text="Salir" class="menu-button" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="setup-panel" class="panel hidden">
+            <ui:Label text="Nueva partida" class="panel-title" />
+            <ui:Label text="Modo" class="option-label" />
+            <ui:VisualElement class="segmented">
+                <ui:Button name="mode-ai" text="Contra la IA" class="segment" />
+                <ui:Button name="mode-local" text="Dos jugadores" class="segment" />
+            </ui:VisualElement>
+            <ui:VisualElement name="ai-options">
+                <ui:Label text="Dificultad" class="option-label" />
+                <ui:VisualElement class="segmented">
+                    <ui:Button name="difficulty-easy" text="Fácil" class="segment" />
+                    <ui:Button name="difficulty-normal" text="Normal" class="segment" />
+                    <ui:Button name="difficulty-hard" text="Difícil" class="segment" />
+                </ui:VisualElement>
+                <ui:Label text="Tu color" class="option-label" />
+                <ui:VisualElement class="segmented">
+                    <ui:Button name="color-one" text="Rojo (empiezas)" class="segment" />
+                    <ui:Button name="color-two" text="Azul" class="segment" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Button name="start-button" text="Jugar" class="menu-button menu-button--primary setup-start" />
+            <ui:Button name="setup-back-button" text="Volver" class="menu-button" />
+        </ui:VisualElement>
+
         <ui:VisualElement name="history-panel" class="panel hidden">
             <ui:Label text="Histórico de partidas" class="panel-title" />
             <ui:VisualElement class="stat-total">

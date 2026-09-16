@@ -92,15 +92,21 @@ namespace Triki.UI
 
             switch (_game.Phase)
             {
+                case GamePhase.Placement when _gameController.IsAiTurn:
+                case GamePhase.Movement when _gameController.IsAiTurn:
+                    SetStatus(_game.CurrentPlayer, $"Turno de {GetDisplayName(_game.CurrentPlayer)}: pensando…");
+                    _restartButton.text = "Reiniciar";
+                    break;
+
                 case GamePhase.Placement:
                     var inHand = _game.GetPiecesInHand(_game.CurrentPlayer);
-                    SetStatus(_game.CurrentPlayer, $"Turno de {PlayerLabels.GetName(_game.CurrentPlayer)}: coloca una ficha ({inHand} en mano)");
+                    SetStatus(_game.CurrentPlayer, $"Turno de {GetDisplayName(_game.CurrentPlayer)}: coloca una ficha ({inHand} en mano)");
                     _restartButton.text = "Reiniciar";
                     break;
 
                 case GamePhase.Movement:
                     var move = _game.MovementMovesPlayed + 1;
-                    SetStatus(_game.CurrentPlayer, $"Turno de {PlayerLabels.GetName(_game.CurrentPlayer)}: mueve una ficha (movimiento {move} de {_game.Rules.MaxMovementMoves})");
+                    SetStatus(_game.CurrentPlayer, $"Turno de {GetDisplayName(_game.CurrentPlayer)}: mueve una ficha (movimiento {move} de {_game.Rules.MaxMovementMoves})");
                     _restartButton.text = "Reiniciar";
                     break;
 
@@ -113,10 +119,19 @@ namespace Triki.UI
 
                 case GamePhase.GameOver:
                     var suffix = _game.WinReason == WinReason.OpponentBlocked ? " por bloqueo" : string.Empty;
-                    SetStatus(_game.Winner, $"¡Gana {PlayerLabels.GetName(_game.Winner)}{suffix}!");
+                    SetStatus(_game.Winner, $"¡Gana {GetDisplayName(_game.Winner)}{suffix}!");
                     _restartButton.text = "Revancha";
                     break;
             }
+        }
+
+        /// <summary>"Rojo", o "Rojo (tú)" / "Azul (IA)" en partidas contra la IA.</summary>
+        private string GetDisplayName(Player player)
+        {
+            var name = PlayerLabels.GetName(player);
+            if (!_gameController.Settings.VsAi)
+                return name;
+            return _gameController.IsAiPlayer(player) ? name + " (IA)" : name + " (tú)";
         }
 
         private void SetStatus(Player player, string text)

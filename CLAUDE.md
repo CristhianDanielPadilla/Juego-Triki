@@ -76,7 +76,7 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Proximas ramas previstas: IA oponente, pantallas adaptables, arte y audio.
+- Proximas ramas previstas: pantallas adaptables, arte y audio.
 
 ## Reglas del juego (resumen)
 
@@ -84,3 +84,14 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   fase) o deja al rival sin movimientos.
 - Empate en la fase de movimiento: misma posicion (fichas + quien mueve) 3 veces, o 60
   movimientos sin ganador. Valores en `TrikiRules`; la victoria tiene prioridad sobre el empate.
+
+## IA
+
+- `Triki.Core/AI/TrikiAi`: negamax + alfa-beta sobre enteros, buffers creados una vez (sin
+  asignaciones por jugada). Facil = 50 % azar + profundidad 1, Normal = 3, Dificil = 8.
+- Su `Apply` debe replicar el orden de reglas de `TrikiGame` (linea -> bloqueo -> limite). Si cambian
+  las reglas, cambiar ambos. La repeticion no se modela en la busqueda.
+- Recibe `System.Random` para poder fijar la semilla en tests.
+- La configuracion de partida (modo, dificultad, color) va del menu al juego por `PlayerPrefs`
+  (`MatchSettingsStore`), no por estaticos: el proyecto no recarga el dominio al entrar en Play.
+- `GameController` hace jugar a la IA tras `_aiMoveDelay` y bloquea el input en su turno.

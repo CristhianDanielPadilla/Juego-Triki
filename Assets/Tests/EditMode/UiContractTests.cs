@@ -12,8 +12,12 @@ namespace Triki.Tests
     {
         private const string UiFolder = "Assets/_Project/UI/";
 
-        [TestCase("main-panel"), TestCase("history-panel")]
+        [TestCase("main-panel"), TestCase("history-panel"), TestCase("setup-panel"), TestCase("ai-options")]
         [TestCase("play-button"), TestCase("history-button"), TestCase("quit-button"), TestCase("back-button")]
+        [TestCase("start-button"), TestCase("setup-back-button")]
+        [TestCase("mode-ai"), TestCase("mode-local")]
+        [TestCase("difficulty-easy"), TestCase("difficulty-normal"), TestCase("difficulty-hard")]
+        [TestCase("color-one"), TestCase("color-two")]
         [TestCase("games-played"), TestCase("draws")]
         [TestCase("player-one-name"), TestCase("player-one-wins"), TestCase("player-one-losses")]
         [TestCase("player-two-name"), TestCase("player-two-wins"), TestCase("player-two-losses")]
@@ -29,6 +33,7 @@ namespace Triki.Tests
 
             Assert.IsFalse(root.Q("main-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("history-panel").ClassListContains("hidden"));
+            Assert.IsTrue(root.Q("setup-panel").ClassListContains("hidden"));
         }
 
         [Test]
