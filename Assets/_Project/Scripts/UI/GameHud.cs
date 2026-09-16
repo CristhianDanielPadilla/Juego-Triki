@@ -54,6 +54,7 @@ namespace Triki.UI
 
             _game.TurnChanged += HandleTurnChanged;
             _game.GameWon += HandleGameWon;
+            _game.GameDrawn += HandleGameDrawn;
             _game.GameReset += Refresh;
             Refresh();
         }
@@ -74,12 +75,15 @@ namespace Triki.UI
 
             _game.TurnChanged -= HandleTurnChanged;
             _game.GameWon -= HandleGameWon;
+            _game.GameDrawn -= HandleGameDrawn;
             _game.GameReset -= Refresh;
         }
 
         private void HandleTurnChanged(Player player) => Refresh();
 
         private void HandleGameWon(Player winner, WinReason reason) => Refresh();
+
+        private void HandleGameDrawn(DrawReason reason) => Refresh();
 
         private void Refresh()
         {
@@ -95,8 +99,16 @@ namespace Triki.UI
                     break;
 
                 case GamePhase.Movement:
-                    SetStatus(_game.CurrentPlayer, $"Turno de {PlayerLabels.GetName(_game.CurrentPlayer)}: mueve una ficha");
+                    var move = _game.MovementMovesPlayed + 1;
+                    SetStatus(_game.CurrentPlayer, $"Turno de {PlayerLabels.GetName(_game.CurrentPlayer)}: mueve una ficha (movimiento {move} de {_game.Rules.MaxMovementMoves})");
                     _restartButton.text = "Reiniciar";
+                    break;
+
+                case GamePhase.GameOver when _game.IsDraw:
+                    SetStatus(Player.None, _game.DrawReason == DrawReason.Repetition
+                        ? $"Empate: la posición se repitió {_game.Rules.RepetitionLimit} veces"
+                        : "Empate: se agotaron los movimientos");
+                    _restartButton.text = "Revancha";
                     break;
 
                 case GamePhase.GameOver:

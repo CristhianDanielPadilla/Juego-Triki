@@ -76,4 +76,11 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Proximas ramas previstas: regla de empate, IA oponente, pantallas adaptables, arte y audio.
+- Proximas ramas previstas: IA oponente, pantallas adaptables, arte y audio.
+
+## Reglas del juego (resumen)
+
+- Colocacion (3 fichas por jugador) -> movimiento por aristas. Gana quien hace linea (en cualquier
+  fase) o deja al rival sin movimientos.
+- Empate en la fase de movimiento: misma posicion (fichas + quien mueve) 3 veces, o 60
+  movimientos sin ganador. Valores en `TrikiRules`; la victoria tiene prioridad sobre el empate.
