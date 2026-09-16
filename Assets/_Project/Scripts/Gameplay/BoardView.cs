@@ -6,17 +6,20 @@ namespace Triki.Gameplay
 {
     /// <summary>
     /// Presentación del tablero: dibuja casillas y aristas a partir de un <see cref="BoardGraph"/>
-    /// y muestra las fichas. No conoce las reglas; solo pinta lo que le dicen.
+    /// y muestra fichas, selección y victoria. No conoce las reglas; solo pinta lo que le dicen.
     /// Todos los renderers se crean una vez en <see cref="Build"/> y luego solo se reutilizan.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class BoardView : MonoBehaviour
     {
         private const int CircleResolution = 128;
+
         private const int EdgeSortingOrder = 0;
         private const int NodeSortingOrder = 1;
-        private const int WinLineSortingOrder = 2;
-        private const int PieceSortingOrder = 3;
+        private const int HintSortingOrder = 2;
+        private const int WinLineSortingOrder = 3;
+        private const int SelectionSortingOrder = 4;
+        private const int PieceSortingOrder = 5;
 
         [Header("Layout (unidades de mundo)")]
         [SerializeField, Min(0.5f)] private float _spacing = 3f;
@@ -25,6 +28,12 @@ namespace Triki.Gameplay
         [SerializeField, Min(0.01f)] private float _edgeThickness = 0.08f;
         [Tooltip("Radio de selección alrededor de cada casilla, como fracción de la separación.")]
         [SerializeField, Range(0.1f, 0.5f)] private float _pickRadius = 0.45f;
+
+        [Header("Selección")]
+        [SerializeField, Min(0.05f)] private float _selectionDiameter = 1.45f;
+        [SerializeField, Min(0.05f)] private float _hintDiameter = 0.8f;
+        [SerializeField] private Color _selectionColor = new Color(1f, 1f, 1f, 0.9f);
+        [SerializeField] private Color _hintColor = new Color(1f, 1f, 1f, 0.35f);
 
         [Header("Victoria")]
         [SerializeField, Min(0.01f)] private float _winLineThickness = 0.3f;
@@ -42,8 +51,10 @@ namespace Triki.Gameplay
 
         private readonly SpriteRenderer[] _pieceAtCell = new SpriteRenderer[BoardGraph.CellCount];
         private readonly SpriteRenderer[] _piecePool = new SpriteRenderer[TrikiGame.PiecesPerPlayer * 2];
+        private readonly SpriteRenderer[] _hints = new SpriteRenderer[BoardGraph.CellCount];
         private int _piecesInUse;
         private SpriteRenderer _winLine;
+        private SpriteRenderer _selection;
 
         private Sprite _ownedCircle;
         private Sprite _ownedLine;
@@ -69,27 +80,29 @@ namespace Triki.Gameplay
             for (var i = 0; i < graph.EdgeCount; i++)
             {
                 graph.GetEdge(i, out var a, out var b);
-                var from = GetCellLocalPosition(a);
-                var to = GetCellLocalPosition(b);
-                var delta = to - from;
-
                 var edge = CreateRenderer("Edge " + a + "-" + b, edgesRoot, line, _edgeColor, EdgeSortingOrder);
-                var t = edge.transform;
-                t.localPosition = (from + to) * 0.5f;
-                t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
-                t.localScale = new Vector3(delta.magnitude, _edgeThickness, 1f);
+                PlaceBar(edge, a, b, _edgeThickness);
             }
 
             var nodesRoot = CreateGroup("Nodes");
+            var hintsRoot = CreateGroup("Hints");
             for (var cell = 0; cell < BoardGraph.CellCount; cell++)
             {
                 var node = CreateRenderer("Node " + cell, nodesRoot, circle, _nodeColor, NodeSortingOrder);
-                node.transform.localPosition = GetCellLocalPosition(cell);
-                node.transform.localScale = new Vector3(_nodeDiameter, _nodeDiameter, 1f);
+                PlaceCircle(node, cell, _nodeDiameter);
+
+                var hint = CreateRenderer("Hint " + cell, hintsRoot, circle, _hintColor, HintSortingOrder);
+                PlaceCircle(hint, cell, _hintDiameter);
+                hint.enabled = false;
+                _hints[cell] = hint;
             }
 
             _winLine = CreateRenderer("Win Line", transform, line, Color.white, WinLineSortingOrder);
             _winLine.enabled = false;
+
+            _selection = CreateRenderer("Selection", transform, circle, _selectionColor, SelectionSortingOrder);
+            _selection.transform.localScale = new Vector3(_selectionDiameter, _selectionDiameter, 1f);
+            _selection.enabled = false;
 
             var piecesRoot = CreateGroup("Pieces");
             for (var i = 0; i < _piecePool.Length; i++)
@@ -115,27 +128,64 @@ namespace Triki.Gameplay
             _pieceAtCell[cell] = piece;
         }
 
-        /// <summary>Resalta la línea ganadora de extremo a extremo y agranda sus fichas.</summary>
-        public void ShowWin(BoardLine line, Player winner)
+        public void MovePiece(int from, int to)
         {
-            var from = GetCellLocalPosition(line.A);
-            var to = GetCellLocalPosition(line.C);
-            var delta = to - from;
+            var piece = _pieceAtCell[from];
+            if (piece == null)
+                throw new InvalidOperationException($"La casilla {from} no muestra ninguna ficha.");
+            if (_pieceAtCell[to] != null)
+                throw new InvalidOperationException($"La casilla {to} ya muestra una ficha.");
 
-            var t = _winLine.transform;
-            t.localPosition = (from + to) * 0.5f;
-            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
-            t.localScale = new Vector3(delta.magnitude, _winLineThickness, 1f);
-            _winLine.color = GetPlayerColor(winner);
-            _winLine.enabled = true;
-
-            var winScale = _pieceDiameter * _winPieceScale;
-            SetPieceScale(line.A, winScale);
-            SetPieceScale(line.B, winScale);
-            SetPieceScale(line.C, winScale);
+            piece.transform.localPosition = GetCellLocalPosition(to);
+            _pieceAtCell[to] = piece;
+            _pieceAtCell[from] = null;
         }
 
-        /// <summary>Oculta fichas y resaltado; deja el tablero listo para otra partida.</summary>
+        /// <summary>Marca la ficha elegida y las casillas a las que puede ir (bits de <paramref name="targetMask"/>).</summary>
+        public void ShowSelection(int cell, int targetMask)
+        {
+            _selection.transform.localPosition = GetCellLocalPosition(cell);
+            _selection.enabled = true;
+
+            for (var i = 0; i < _hints.Length; i++)
+                _hints[i].enabled = (targetMask & (1 << i)) != 0;
+        }
+
+        public void HideSelection()
+        {
+            if (_selection != null)
+                _selection.enabled = false;
+
+            for (var i = 0; i < _hints.Length; i++)
+            {
+                if (_hints[i] != null)
+                    _hints[i].enabled = false;
+            }
+        }
+
+        /// <summary>Resalta la línea ganadora de extremo a extremo y agranda sus fichas.</summary>
+        public void ShowWinningLine(BoardLine line, Player winner)
+        {
+            PlaceBar(_winLine, line.A, line.C, _winLineThickness);
+            _winLine.color = GetPlayerColor(winner);
+            _winLine.enabled = true;
+            ShowWinningPieces(line.Mask);
+        }
+
+        /// <summary>Agranda las fichas de las casillas marcadas en <paramref name="cellMask"/>.</summary>
+        public void ShowWinningPieces(int cellMask)
+        {
+            HideSelection();
+            var diameter = _pieceDiameter * _winPieceScale;
+            for (var cell = 0; cell < _pieceAtCell.Length; cell++)
+            {
+                var piece = _pieceAtCell[cell];
+                if (piece != null && (cellMask & (1 << cell)) != 0)
+                    piece.transform.localScale = new Vector3(diameter, diameter, 1f);
+            }
+        }
+
+        /// <summary>Oculta fichas, selección y resaltado; deja el tablero listo para otra partida.</summary>
         public void ClearPieces()
         {
             var baseScale = new Vector3(_pieceDiameter, _pieceDiameter, 1f);
@@ -150,6 +200,7 @@ namespace Triki.Gameplay
 
             if (_winLine != null)
                 _winLine.enabled = false;
+            HideSelection();
 
             Array.Clear(_pieceAtCell, 0, _pieceAtCell.Length);
             _piecesInUse = 0;
@@ -194,11 +245,24 @@ namespace Triki.Gameplay
 
         private Color GetPlayerColor(Player player) => player == Player.One ? _playerOneColor : _playerTwoColor;
 
-        private void SetPieceScale(int cell, float diameter)
+        private void PlaceCircle(SpriteRenderer circle, int cell, float diameter)
         {
-            var piece = _pieceAtCell[cell];
-            if (piece != null)
-                piece.transform.localScale = new Vector3(diameter, diameter, 1f);
+            var t = circle.transform;
+            t.localPosition = GetCellLocalPosition(cell);
+            t.localScale = new Vector3(diameter, diameter, 1f);
+        }
+
+        /// <summary>Estira un sprite de 1 unidad para unir los centros de dos casillas.</summary>
+        private void PlaceBar(SpriteRenderer bar, int fromCell, int toCell, float thickness)
+        {
+            var from = GetCellLocalPosition(fromCell);
+            var to = GetCellLocalPosition(toCell);
+            var delta = to - from;
+
+            var t = bar.transform;
+            t.localPosition = (from + to) * 0.5f;
+            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+            t.localScale = new Vector3(delta.magnitude, thickness, 1f);
         }
 
         private Transform CreateGroup(string groupName)

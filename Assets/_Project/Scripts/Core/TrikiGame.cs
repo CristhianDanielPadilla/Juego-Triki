@@ -3,10 +3,14 @@ using System;
 namespace Triki.Core
 {
     /// <summary>
-    /// Reglas y turnos. Cada jugador tiene <see cref="PiecesPerPlayer"/> fichas y las coloca
-    /// por turnos; al estar las 6 en el tablero la partida pasa a <see cref="GamePhase.Movement"/>.
-    /// Gana quien alinee sus 3 fichas en una recta cuyas casillas estén unidas por aristas,
-    /// incluso durante la colocación.
+    /// Reglas y turnos.
+    /// <list type="number">
+    /// <item>Colocación: cada jugador pone sus <see cref="PiecesPerPlayer"/> fichas por turnos.</item>
+    /// <item>Movimiento: en su turno, el jugador lleva una ficha propia a una casilla vacía
+    /// conectada por una arista.</item>
+    /// </list>
+    /// Gana quien alinee sus 3 fichas en una recta unida por aristas (en cualquier fase), o
+    /// quien deje al rival sin movimientos cuando le toca mover.
     /// La capa visual escucha los eventos; nunca consulta el estado cada frame.
     /// </summary>
     public sealed class TrikiGame
@@ -31,13 +35,16 @@ namespace Triki.Core
         /// <summary>Casilla y dueño de la ficha recién colocada.</summary>
         public event Action<int, Player> PiecePlaced;
 
+        /// <summary>Origen, destino y dueño de la ficha recién movida.</summary>
+        public event Action<int, int, Player> PieceMoved;
+
         /// <summary>Se emite al cambiar de turno. No se emite en la jugada que gana.</summary>
         public event Action<Player> TurnChanged;
 
         public event Action<GamePhase> PhaseChanged;
 
-        /// <summary>Ganador y línea formada. Se emite después de <see cref="PhaseChanged"/>.</summary>
-        public event Action<Player, BoardLine> GameWon;
+        /// <summary>Ganador y motivo. Se emite después de <see cref="PhaseChanged"/>.</summary>
+        public event Action<Player, WinReason> GameWon;
 
         public event Action GameReset;
 
@@ -51,7 +58,10 @@ namespace Triki.Core
         /// <summary><see cref="Player.None"/> mientras nadie haya ganado.</summary>
         public Player Winner { get; private set; }
 
-        /// <summary>Solo tiene sentido si <see cref="Winner"/> no es <see cref="Player.None"/>.</summary>
+        /// <summary>Solo tiene sentido si hay <see cref="Winner"/>.</summary>
+        public WinReason WinReason { get; private set; }
+
+        /// <summary>Solo tiene sentido si <see cref="WinReason"/> es <see cref="Core.WinReason.Line"/>.</summary>
         public BoardLine WinningLine { get; private set; }
 
         /// <summary>Líneas que dan victoria con el grafo de esta partida.</summary>
@@ -62,6 +72,26 @@ namespace Triki.Core
         public int GetPiecesPlaced(Player player) => _piecesPlaced[ToIndex(player)];
 
         public int GetPiecesInHand(Player player) => PiecesPerPlayer - _piecesPlaced[ToIndex(player)];
+
+        /// <summary>Casillas vacías a las que puede ir la ficha de <paramref name="from"/>, como bits.</summary>
+        public int GetMoveTargets(int from)
+        {
+            if (!BoardGraph.IsValidCell(from) || Board.IsEmpty(from))
+                return 0;
+            return Board.Graph.GetNeighborMask(from) & Board.GetMask(Player.None);
+        }
+
+        public bool HasAnyMove(Player player)
+        {
+            var pieces = Board.GetMask(player);
+            var empty = Board.GetMask(Player.None);
+            for (var cell = 0; pieces != 0; cell++, pieces >>= 1)
+            {
+                if ((pieces & 1) != 0 && (Board.Graph.GetNeighborMask(cell) & empty) != 0)
+                    return true;
+            }
+            return false;
+        }
 
         public PlaceResult TryPlace(int cell)
         {
@@ -77,24 +107,46 @@ namespace Triki.Core
             _piecesPlaced[(int)player]++;
             PiecePlaced?.Invoke(cell, player);
 
-            if (TryFindLine(Board.GetMask(player), out var line))
-            {
-                Winner = player;
-                WinningLine = line;
-                ChangePhase(GamePhase.GameOver);
-                GameWon?.Invoke(player, line);
+            if (TryWinByLine(player))
                 return PlaceResult.Placed;
-            }
 
-            if (_piecesPlaced[(int)Player.One] == PiecesPerPlayer &&
-                _piecesPlaced[(int)Player.Two] == PiecesPerPlayer)
+            var allPlaced = _piecesPlaced[(int)Player.One] == PiecesPerPlayer &&
+                            _piecesPlaced[(int)Player.Two] == PiecesPerPlayer;
+            if (allPlaced)
             {
+                if (TryWinByBlock(player))
+                    return PlaceResult.Placed;
                 ChangePhase(GamePhase.Movement);
             }
 
-            CurrentPlayer = player.Opponent();
-            TurnChanged?.Invoke(CurrentPlayer);
+            PassTurn(player);
             return PlaceResult.Placed;
+        }
+
+        public MoveResult TryMove(int from, int to)
+        {
+            if (Phase != GamePhase.Movement)
+                return MoveResult.WrongPhase;
+            if (!BoardGraph.IsValidCell(from) || !BoardGraph.IsValidCell(to))
+                return MoveResult.InvalidCell;
+
+            var player = CurrentPlayer;
+            if (Board[from] != player)
+                return MoveResult.NotYourPiece;
+            if (!Board.IsEmpty(to))
+                return MoveResult.CellOccupied;
+            if (!Board.Graph.AreAdjacent(from, to))
+                return MoveResult.NotAdjacent;
+
+            Board.Set(from, Player.None);
+            Board.Set(to, player);
+            PieceMoved?.Invoke(from, to, player);
+
+            if (TryWinByLine(player) || TryWinByBlock(player))
+                return MoveResult.Moved;
+
+            PassTurn(player);
+            return MoveResult.Moved;
         }
 
         public void Reset(Player startingPlayer = Player.One)
@@ -106,24 +158,49 @@ namespace Triki.Core
             CurrentPlayer = startingPlayer;
             Phase = GamePhase.Placement;
             Winner = Player.None;
+            WinReason = default;
             WinningLine = default;
             GameReset?.Invoke();
         }
 
-        private bool TryFindLine(int playerMask, out BoardLine line)
+        private bool TryWinByLine(Player player)
         {
+            var mask = Board.GetMask(player);
             for (var i = 0; i < _winLines.Length; i++)
             {
-                var candidate = _winLines[i];
-                if ((playerMask & candidate.Mask) == candidate.Mask)
+                var line = _winLines[i];
+                if ((mask & line.Mask) == line.Mask)
                 {
-                    line = candidate;
+                    WinningLine = line;
+                    EndGame(player, WinReason.Line);
                     return true;
                 }
             }
-
-            line = default;
             return false;
+        }
+
+        /// <summary>Gana <paramref name="player"/> si a su rival le toca mover y no puede.</summary>
+        private bool TryWinByBlock(Player player)
+        {
+            if (HasAnyMove(player.Opponent()))
+                return false;
+
+            EndGame(player, WinReason.OpponentBlocked);
+            return true;
+        }
+
+        private void EndGame(Player winner, WinReason reason)
+        {
+            Winner = winner;
+            WinReason = reason;
+            ChangePhase(GamePhase.GameOver);
+            GameWon?.Invoke(winner, reason);
+        }
+
+        private void PassTurn(Player player)
+        {
+            CurrentPlayer = player.Opponent();
+            TurnChanged?.Invoke(CurrentPlayer);
         }
 
         private void ChangePhase(GamePhase phase)

@@ -68,12 +68,12 @@ namespace Triki.Tests
             _game.PiecePlaced += (cell, player) => log.Add($"placed {cell} {player}");
             _game.TurnChanged += player => log.Add($"turn {player}");
             _game.PhaseChanged += phase => log.Add($"phase {phase}");
-            _game.GameWon += (player, line) => log.Add($"won {player} {line}");
+            _game.GameWon += (player, reason) => log.Add($"won {player} {reason} {_game.WinningLine}");
 
             _game.TryPlace(2);
 
             CollectionAssert.AreEqual(
-                new[] { "placed 2 One", "phase GameOver", "won One (0, 1, 2)" },
+                new[] { "placed 2 One", "phase GameOver", "won One Line (0, 1, 2)" },
                 log);
             Assert.AreEqual(Player.One, _game.CurrentPlayer, "Al terminar se conserva al ganador.");
         }

@@ -5,17 +5,21 @@ using UnityEngine.InputSystem;
 namespace Triki.Gameplay
 {
     /// <summary>
-    /// Punto de unión: es dueño de la partida, traduce el puntero (mouse o toque) a casillas
+    /// Punto de unión: es dueño de la partida, traduce el puntero (mouse o toque) a jugadas
     /// y reenvía los eventos de <see cref="TrikiGame"/> a la vista.
+    /// En la fase de movimiento, un clic elige una ficha propia y el siguiente, su destino.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameController : MonoBehaviour
     {
+        private const int NoSelection = -1;
+
         [SerializeField] private BoardView _boardView;
         [SerializeField] private Camera _camera;
 
         private TrikiGame _game;
         private InputAction _pressAction;
+        private int _selectedCell = NoSelection;
 
         /// <summary>Partida en curso; la UI se suscribe a sus eventos.</summary>
         public TrikiGame Game => _game;
@@ -42,6 +46,7 @@ namespace Triki.Gameplay
                 return;
 
             _game.PiecePlaced += HandlePiecePlaced;
+            _game.PieceMoved += HandlePieceMoved;
             _game.GameWon += HandleGameWon;
             _game.GameReset += HandleGameReset;
             _pressAction.performed += HandlePress;
@@ -56,6 +61,7 @@ namespace Triki.Gameplay
             _pressAction.Disable();
             _pressAction.performed -= HandlePress;
             _game.PiecePlaced -= HandlePiecePlaced;
+            _game.PieceMoved -= HandlePieceMoved;
             _game.GameWon -= HandleGameWon;
             _game.GameReset -= HandleGameReset;
         }
@@ -80,14 +86,72 @@ namespace Triki.Gameplay
 
             var screen = pointer.position.ReadValue();
             var world = _camera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, 0f));
-            if (_boardView.TryGetCell(world, out var cell))
+            if (!_boardView.TryGetCell(world, out var cell))
+            {
+                ClearSelection();
+                return;
+            }
+
+            if (_game.Phase == GamePhase.Placement)
                 _game.TryPlace(cell);
+            else
+                HandleMovementPress(cell);
+        }
+
+        private void HandleMovementPress(int cell)
+        {
+            if (_game.Board[cell] == _game.CurrentPlayer)
+            {
+                // Clic en ficha propia: la elige, o la suelta si ya estaba elegida.
+                if (cell == _selectedCell)
+                    ClearSelection();
+                else
+                    Select(cell);
+                return;
+            }
+
+            if (_selectedCell != NoSelection && _game.TryMove(_selectedCell, cell) == MoveResult.Moved)
+                return; // HandlePieceMoved limpia la selección.
+
+            ClearSelection();
+        }
+
+        private void Select(int cell)
+        {
+            _selectedCell = cell;
+            _boardView.ShowSelection(cell, _game.GetMoveTargets(cell));
+        }
+
+        private void ClearSelection()
+        {
+            if (_selectedCell == NoSelection)
+                return;
+
+            _selectedCell = NoSelection;
+            _boardView.HideSelection();
         }
 
         private void HandlePiecePlaced(int cell, Player player) => _boardView.ShowPiece(cell, player);
 
-        private void HandleGameWon(Player winner, BoardLine line) => _boardView.ShowWin(line, winner);
+        private void HandlePieceMoved(int from, int to, Player player)
+        {
+            ClearSelection();
+            _boardView.MovePiece(from, to);
+        }
 
-        private void HandleGameReset() => _boardView.ClearPieces();
+        private void HandleGameWon(Player winner, WinReason reason)
+        {
+            ClearSelection();
+            if (reason == WinReason.Line)
+                _boardView.ShowWinningLine(_game.WinningLine, winner);
+            else
+                _boardView.ShowWinningPieces(_game.Board.GetMask(winner));
+        }
+
+        private void HandleGameReset()
+        {
+            _selectedCell = NoSelection;
+            _boardView.ClearPieces();
+        }
     }
 }
