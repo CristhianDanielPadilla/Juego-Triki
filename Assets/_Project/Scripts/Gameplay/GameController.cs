@@ -20,8 +20,10 @@ namespace Triki.Gameplay
         private TrikiGame _game;
         private InputAction _pressAction;
         private int _selectedCell = NoSelection;
+        private StatsRepository _statsRepository;
+        private MatchStats _stats;
 
-        /// <summary>Partida en curso; la UI se suscribe a sus eventos.</summary>
+        /// <summary>Partida en curso; la UI se suscribe a sus eventos. Disponible desde <c>Start</c>.</summary>
         public TrikiGame Game => _game;
 
         public void RestartGame() => _game?.Reset();
@@ -34,6 +36,9 @@ namespace Triki.Gameplay
                 enabled = false;
                 return;
             }
+
+            _statsRepository = new StatsRepository();
+            _stats = _statsRepository.Load();
 
             _game = new TrikiGame();
             _boardView.Build(_game.Board.Graph);
@@ -73,12 +78,8 @@ namespace Triki.Gameplay
 
         private void HandlePress(InputAction.CallbackContext context)
         {
-            // TEMPORAL hasta tener UI: con la partida terminada, cualquier clic la reinicia.
             if (_game.Phase == GamePhase.GameOver)
-            {
-                _game.Reset();
                 return;
-            }
 
             var pointer = Pointer.current;
             if (pointer == null)
@@ -141,6 +142,9 @@ namespace Triki.Gameplay
 
         private void HandleGameWon(Player winner, WinReason reason)
         {
+            _stats.RecordWin(winner);
+            _statsRepository.Save(_stats);
+
             ClearSelection();
             if (reason == WinReason.Line)
                 _boardView.ShowWinningLine(_game.WinningLine, winner);

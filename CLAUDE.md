@@ -10,16 +10,25 @@ Assets/
     Art/Sprites/       Sprites del tablero, fichas, UI
     Audio/
     Prefabs/
-    Scenes/            Main.unity y las que vengan (Menu, Game...)
+    Scenes/            Menu.unity (arranque) y Game.unity
     Scripts/
       Core/            Triki.Core     - logica pura, SIN UnityEngine (noEngineReferences)
-      Gameplay/        Triki.Gameplay - MonoBehaviours, input, presentacion del tablero
-      UI/              Triki.UI       - HUD, menus, marcador
-  Tests/EditMode/      Triki.Tests.EditMode - tests NUnit sobre Triki.Core
+      Gameplay/        Triki.Gameplay - MonoBehaviours, input, tablero, guardado del historico
+      UI/              Triki.UI       - menu, HUD, navegacion entre escenas
+    UI/                UI Toolkit: UXML, Triki.uss (paleta), TrikiTheme.tss, TrikiPanelSettings
+  Tests/EditMode/      Triki.Tests.EditMode - NUnit sobre Core, persistencia y contrato UXML
   Settings/            URP (RP Assets + Renderer 2D), Volume Profile e InputSystem_Actions
 ```
 
-Escena de arranque: `Assets/_Project/Scenes/Main.unity` (unica en Build Settings).
+Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
+`Triki.UI.SceneNavigator`; si se renombra una escena, se cambia ahi.
+
+## UI
+
+- UI Toolkit, no uGUI. Los scripts buscan elementos por `name`; `UiContractTests` falla si un
+  UXML pierde un nombre que el codigo usa. Al renombrar en UXML, actualizar codigo y test.
+- Los colores de jugador estan en `Triki.uss` y en `BoardView` (inspector): mantenerlos iguales.
+- El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`).
 
 ## Reglas de arquitectura
 

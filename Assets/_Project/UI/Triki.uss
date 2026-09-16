@@ -1,0 +1,186 @@
+/* Paleta compartida. Los colores de jugador deben coincidir con BoardView. */
+:root {
+    --color-background: rgb(22, 25, 31);
+    --color-panel: rgb(35, 40, 51);
+    --color-panel-border: rgb(58, 65, 80);
+    --color-button: rgb(48, 55, 69);
+    --color-button-hover: rgb(64, 72, 90);
+    --color-text: rgb(230, 233, 239);
+    --color-muted: rgb(154, 163, 178);
+    --color-player-one: rgb(242, 92, 84);
+    --color-player-two: rgb(74, 163, 245);
+
+    color: var(--color-text);
+}
+
+.hidden {
+    display: none;
+}
+
+.player-one {
+    color: var(--color-player-one);
+}
+
+.player-two {
+    color: var(--color-player-two);
+}
+
+/* ---------- Menú ---------- */
+
+.screen {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-background);
+}
+
+.panel {
+    min-width: 640px;
+    padding: 48px 64px;
+    align-items: stretch;
+    background-color: var(--color-panel);
+    border-width: 2px;
+    border-color: var(--color-panel-border);
+    border-radius: 24px;
+}
+
+.title {
+    font-size: 140px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 16px;
+    margin-bottom: 0;
+}
+
+.subtitle {
+    font-size: 30px;
+    color: var(--color-muted);
+    -unity-text-align: middle-center;
+    margin-bottom: 40px;
+}
+
+.panel-title {
+    font-size: 56px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 32px;
+}
+
+.menu-button {
+    height: 88px;
+    margin: 10px 0;
+    font-size: 38px;
+    color: var(--color-text);
+    background-color: var(--color-button);
+    border-width: 0;
+    border-radius: 16px;
+    transition-property: background-color, scale;
+    transition-duration: 0.12s;
+}
+
+.menu-button:hover,
+.menu-button:focus {
+    background-color: var(--color-button-hover);
+}
+
+.menu-button:active {
+    scale: 0.97 0.97;
+}
+
+.menu-button--primary {
+    background-color: var(--color-player-one);
+    -unity-font-style: bold;
+}
+
+.menu-button--primary:hover,
+.menu-button--primary:focus {
+    background-color: rgb(255, 118, 110);
+}
+
+/* ---------- Histórico ---------- */
+
+.stat-total {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    background-color: var(--color-button);
+    border-radius: 16px;
+}
+
+.stat-total__name {
+    font-size: 36px;
+}
+
+.stat-total__value {
+    font-size: 48px;
+    -unity-font-style: bold;
+}
+
+.stats-table {
+    margin-bottom: 32px;
+}
+
+.stats-table__row {
+    flex-direction: row;
+    padding: 12px 24px;
+    border-bottom-width: 1px;
+    border-color: var(--color-panel-border);
+}
+
+.stats-table__header .cell {
+    font-size: 26px;
+    color: var(--color-muted);
+}
+
+.cell {
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 40px;
+    -unity-text-align: middle-center;
+}
+
+.cell--name {
+    flex-grow: 1.4;
+    -unity-text-align: middle-left;
+    -unity-font-style: bold;
+}
+
+/* ---------- HUD de partida ---------- */
+
+.hud {
+    flex-grow: 1;
+    justify-content: space-between;
+    padding: 28px 40px;
+}
+
+.hud__status {
+    align-self: center;
+    font-size: 44px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding: 10px 32px;
+    background-color: rgba(35, 40, 51, 0.85);
+    border-radius: 16px;
+}
+
+.hud__actions {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.hud-button {
+    min-width: 240px;
+    height: 72px;
+    margin: 0 12px;
+    font-size: 32px;
+    color: var(--color-text);
+    background-color: var(--color-button);
+    border-width: 0;
+    border-radius: 14px;
+}
+
+.hud-button:hover {
+    background-color: var(--color-button-hover);
+}
