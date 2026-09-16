@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="Triki.uss" />
+    <!-- picking-mode Ignore: la capa transparente no intercepta clics; solo los botones los reciben. -->
+    <ui:VisualElement name="hud" class="hud" picking-mode="Ignore">
+        <ui:Label name="status-label" text="" class="hud__status" picking-mode="Ignore" />
+        <ui:VisualElement class="hud__actions" picking-mode="Ignore">
+            <ui:Button name="restart-button" text="Reiniciar" class="hud-button" />
+            <ui:Button name="menu-button" text="Menú" class="hud-button" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

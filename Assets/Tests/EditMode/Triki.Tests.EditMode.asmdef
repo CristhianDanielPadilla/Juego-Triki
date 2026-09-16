@@ -4,7 +4,8 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Triki.Core"
+        "Triki.Core",
+        "Triki.Gameplay"
     ],
     "includePlatforms": [
         "Editor"
