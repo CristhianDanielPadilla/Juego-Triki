@@ -11,7 +11,7 @@ namespace Triki.UI
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
-    public sealed class GameHud : MonoBehaviour
+    public sealed class GameHud : MonoBehaviour, IPointerBlocker
     {
         [SerializeField] private UIDocument _document;
         [SerializeField] private GameController _gameController;
@@ -36,6 +36,7 @@ namespace Triki.UI
 
             _restartButton.clicked += _gameController.RestartGame;
             _menuButton.clicked += SceneNavigator.OpenMenu;
+            _gameController.SetPointerBlocker(this);
 
             // Al volver a habilitarse (no en el primer OnEnable) el juego ya existe.
             if (_game != null)
@@ -66,6 +67,30 @@ namespace Triki.UI
 
             _restartButton.clicked -= _gameController.RestartGame;
             _menuButton.clicked -= SceneNavigator.OpenMenu;
+            _gameController.SetPointerBlocker(null);
+        }
+
+        /// <summary>
+        /// Un clic es del HUD si cae sobre uno de sus botones. El resto del panel está marcado
+        /// como <c>picking-mode="Ignore"</c> en el UXML, así que no intercepta nada y el tablero
+        /// recibe los clics con normalidad.
+        /// </summary>
+        public bool BlocksPointer(Vector2 screenPosition)
+        {
+            var panel = _document != null ? _document.rootVisualElement?.panel : null;
+            if (panel == null)
+                return false;
+
+            // ScreenToPanel espera el origen arriba a la izquierda; el puntero llega al revés.
+            var point = RuntimePanelUtils.ScreenToPanel(
+                panel, new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+
+            for (var element = panel.Pick(point); element != null; element = element.parent)
+            {
+                if (element is Button)
+                    return true;
+            }
+            return false;
         }
 
         private void OnDestroy()

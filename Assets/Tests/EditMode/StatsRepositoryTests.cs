@@ -94,6 +94,38 @@ namespace Triki.Tests
         }
 
         [Test]
+        public void Save_ReplacesTheFileInOneStep()
+        {
+            // El reemplazo es atómico: nunca hay un instante sin histórico en el disco, y el
+            // temporal no queda tirado. Borrar y volver a mover sí dejaba ese hueco.
+            var history = new MatchHistory();
+            history.Overall.RecordWin(Player.One);
+            _repository.Save(history);
+
+            history.Overall.RecordWin(Player.Two);
+            _repository.Save(history);
+
+            Assert.IsTrue(File.Exists(_repository.FilePath));
+            Assert.IsFalse(File.Exists(_repository.FilePath + ".tmp"), "El temporal debe desaparecer.");
+            Assert.AreEqual(2, _repository.Load().Overall.GamesPlayed);
+        }
+
+        [Test]
+        public void Save_WithLeftoverTempFile_StillWorks()
+        {
+            // Un temporal de una caída anterior no debe impedir guardar.
+            _repository.Save(new MatchHistory());
+            WriteFile(_repository.FilePath + ".tmp", "sobras de un guardado a medias");
+
+            var history = new MatchHistory();
+            history.Overall.RecordDraw();
+            _repository.Save(history);
+
+            Assert.AreEqual(1, _repository.Load().Overall.Draws);
+            Assert.IsFalse(File.Exists(_repository.FilePath + ".tmp"));
+        }
+
+        [Test]
         public void Load_V1File_GoesToOverallOnly()
         {
             WriteFile(_repository.FilePath, V1File);

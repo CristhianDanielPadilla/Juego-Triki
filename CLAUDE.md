@@ -34,6 +34,12 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   La matematica esta en funciones puras (`CameraFit`, `SafeAreaInsets`) con tests.
 - `SceneWiringTests` abre las escenas en preview y falla si falta un script o una referencia.
   Si se edita una escena a mano (YAML), correr los tests antes de commitear.
+- Los clics del tablero entran por InputSystem (`<Pointer>/press`), al margen de UI Toolkit, asi
+  que la UI no los detiene sola. El area sensible de las casillas de abajo (`_pickRadius`) sobresale
+  del tablero y se solapa con los botones del HUD, asi que `GameHud` implementa `IPointerBlocker`
+  (interfaz en Gameplay, para no invertir las dependencias) y `GameController` le pregunta antes de
+  tocar el tablero. El filtro es `panel.Pick`: **todo lo que no sea un boton lleva
+  `picking-mode="Ignore"` en `GameHud.uxml`**, o se tragaria los clics. `UiContractTests` lo exige.
 - Historico (`MatchHistory`, Core), tres registros **independientes** (`HistorySection`):
   - `Overall` (pestaña General): todas las partidas por color, sin importar el modo. Incluye las
     de v0.1.x, que no guardaban el modo.
@@ -49,6 +55,8 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`),
   formato `version: 2`. Un archivo sin version o con `version: 1` se lee solo a `Overall`.
   En Windows: `%USERPROFILE%\AppData\LocalLow\CDCompany\Juego-Triki\`.
+  - Se guarda escribiendo un `.tmp` y reemplazando con `File.Replace`, que es atomico: si el juego
+    muere a mitad, queda intacto el historico anterior. No volver a borrar y mover.
   - Compañia `CDCompany` e identificador `com.cdcompany.juegotriki` (Player Settings). v0.1.0 salio
     con `DefaultCompany`: si falta el historico, `StatsRepository` copia el de
     `LocalLow\DefaultCompany\Juego-Triki` (el original queda como respaldo). Las preferencias en
@@ -67,6 +75,9 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Nada de asignaciones por frame en `Update` (LINQ, `new`, strings concatenados). El tablero es
   3x3: todo cabe en arrays de tamano fijo reutilizados.
 - Un cambio de estado del juego = un evento que la capa visual escucha. La UI no calcula reglas.
+- El juego se limita a 60 fps con vSync apagado (`FrameRateLimiter`, `[RuntimeInitializeOnLoadMethod]`).
+  El tablero esta quieto casi todo el tiempo: sin limite se dibujan nueve circulos a cientos de fps.
+  El limite solo funciona con `vSyncCount = 0`; si se vuelve a activar, Unity ignora `targetFrameRate`.
 
 ## Convenciones
 
