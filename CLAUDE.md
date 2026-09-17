@@ -82,7 +82,22 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Siguientes pasos sugeridos: CI con GameCI (tests en cada PR) y etiqueta `v0.1.0`.
+- Siguiente paso sugerido: etiqueta `v0.1.0`.
+
+## CI (GitHub Actions)
+
+- `.github/workflows/tests.yml`: tests EditMode con `game-ci/unity-test-runner@v4` en cada PR,
+  en cada push a `main` y a mano (Actions > Tests > Run workflow). Imagen
+  `unityci/editor:ubuntu-6000.6.0f1-base-3` (la version sale de `ProjectVersion.txt`).
+- Secretos del repositorio (Settings > Secrets and variables > Actions), licencia Personal:
+  - `UNITY_LICENSE`: contenido de `C:\ProgramData\Unity\Unity_lic.ulf`. Se genera en Unity Hub >
+    Preferences > Licenses > Add > Get a free personal license (hay que pulsar Add aunque ya se vea
+    una licencia).
+  - `UNITY_EMAIL` y `UNITY_PASSWORD`: la cuenta de Unity de esa licencia.
+  - Sin ellos el job falla en el primer paso indicando cual falta.
+- La cache de `Library` acelera las ejecuciones siguientes; la primera tarda mas (descarga la imagen
+  e importa todo). El repo es privado: cada ejecucion consume minutos del plan de GitHub.
+- Si se actualiza Unity, comprobar que existe la imagen de GameCI para la nueva version.
 
 ## Reglas del juego (resumen)
 
