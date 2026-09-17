@@ -33,6 +33,7 @@ namespace Triki.Core
         private readonly int[] _lines = new int[BoardLine.StraightLineCount];
         private int _lineCount;
         private int _maxMovementMoves;
+        private int _forbiddenOpeningCell;
 
         public TrikiAi(AiDifficulty difficulty, Random random = null)
         {
@@ -105,6 +106,7 @@ namespace Triki.Core
                 _lines[i] = game.GetWinLine(i).Mask;
 
             _maxMovementMoves = game.Rules.MaxMovementMoves;
+            _forbiddenOpeningCell = game.Rules.BanCenterOpening ? BoardGraph.CenterCell : TrikiGame.NoCell;
         }
 
         /// <summary>Puntúa cada jugada de la raíz y elige al azar entre las mejores.</summary>
@@ -187,9 +189,11 @@ namespace Triki.Core
 
             if (state.PlacedTotal < TotalPieces)
             {
+                // La primera ficha de la partida no puede ir al centro: mismo veto que TrikiGame.
+                var forbidden = state.PlacedTotal == 0 ? _forbiddenOpeningCell : TrikiGame.NoCell;
                 for (var cell = 0; cell < CellCount; cell++)
                 {
-                    if ((empty & (1 << cell)) != 0)
+                    if ((empty & (1 << cell)) != 0 && cell != forbidden)
                         moves[count++] = cell;
                 }
                 return count;
