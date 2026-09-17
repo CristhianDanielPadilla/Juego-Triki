@@ -38,10 +38,13 @@
         <ui:VisualElement name="history-panel" class="panel hidden">
             <ui:Label text="Histórico de partidas" class="panel-title" />
             <ui:VisualElement class="segmented history-tabs">
+                <ui:Button name="tab-general" text="General" class="segment" />
                 <ui:Button name="tab-ai" text="Contra la IA" class="segment" />
                 <ui:Button name="tab-local" text="Dos jugadores" class="segment" />
-                <ui:Button name="tab-legacy" text="Anteriores" class="segment" />
             </ui:VisualElement>
+
+            <!-- General: todas las partidas, sin importar el modo. -->
+            <ui:Instance template="ColorStatsTable" name="history-general" />
 
             <!-- Contra la IA: tus resultados por dificultad. -->
             <ui:VisualElement name="history-ai">
@@ -80,13 +83,21 @@
             <!-- Dos jugadores: por color. -->
             <ui:Instance template="ColorStatsTable" name="history-local" />
 
-            <!-- Partidas de v0.1.x, guardadas sin indicar el modo. Solo visible si hay alguna. -->
-            <ui:VisualElement name="history-legacy">
-                <ui:Label text="Partidas guardadas antes de separar el histórico por modo; pueden ser contra la IA o de dos jugadores." class="history-note" />
-                <ui:Instance template="ColorStatsTable" name="legacy-stats" />
-            </ui:VisualElement>
-
+            <!-- Borra solo el registro de la pestaña visible, tras confirmar. -->
+            <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline" />
             <ui:Button name="back-button" text="Volver" class="menu-button" />
+        </ui:VisualElement>
+
+        <!-- Confirmación modal. Cubre toda la pantalla para que no se pueda tocar lo de detrás. -->
+        <ui:VisualElement name="confirm-overlay" class="overlay hidden">
+            <ui:VisualElement name="confirm-dialog" class="panel dialog">
+                <ui:Label name="confirm-title" text="¿Eliminar registro?" class="panel-title" />
+                <ui:Label name="confirm-message" text="" class="dialog__message" />
+                <ui:VisualElement class="dialog__actions">
+                    <ui:Button name="confirm-cancel" text="Cancelar" class="menu-button dialog__button" />
+                    <ui:Button name="confirm-accept" text="Eliminar" class="menu-button menu-button--danger dialog__button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

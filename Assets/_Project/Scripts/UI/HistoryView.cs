@@ -5,105 +5,144 @@ using UnityEngine.UIElements;
 namespace Triki.UI
 {
     /// <summary>
-    /// Panel del histórico: pestañas "Contra la IA", "Dos jugadores" y "Anteriores" (esta última
-    /// solo si hay partidas guardadas antes de separar por modo). Solo muestra datos.
+    /// Panel del histórico: pestañas "General", "Contra la IA" y "Dos jugadores", y un botón que
+    /// pide borrar el registro de la pestaña visible (<see cref="DeleteRequested"/>).
+    /// Solo muestra datos; borrar y confirmar lo decide quien la usa.
     /// </summary>
     internal sealed class HistoryView
     {
         private const string HiddenClass = "hidden";
         private const string SelectedClass = "segment--selected";
 
+        private readonly Button _tabGeneral;
         private readonly Button _tabAi;
         private readonly Button _tabLocal;
-        private readonly Button _tabLegacy;
+        private readonly VisualElement _generalPage;
         private readonly VisualElement _aiPage;
         private readonly VisualElement _localPage;
-        private readonly VisualElement _legacyPage;
         private readonly Label _aiGames;
         private readonly VisualElement _aiEasy;
         private readonly VisualElement _aiNormal;
         private readonly VisualElement _aiHard;
-        private readonly VisualElement _legacyTable;
+        private readonly Button _deleteButton;
 
-        private Tab _current = Tab.VsAi;
-        private bool _hasLegacy;
+        private MatchHistory _history;
 
         public HistoryView(VisualElement panel)
         {
             if (panel == null)
                 throw new ArgumentNullException(nameof(panel));
 
+            _tabGeneral = panel.Q<Button>("tab-general");
             _tabAi = panel.Q<Button>("tab-ai");
             _tabLocal = panel.Q<Button>("tab-local");
-            _tabLegacy = panel.Q<Button>("tab-legacy");
+            _generalPage = panel.Q("history-general");
             _aiPage = panel.Q("history-ai");
             _localPage = panel.Q("history-local");
-            _legacyPage = panel.Q("history-legacy");
             _aiGames = _aiPage.Q<Label>("ai-games");
             _aiEasy = _aiPage.Q("ai-easy");
             _aiNormal = _aiPage.Q("ai-normal");
             _aiHard = _aiPage.Q("ai-hard");
-            _legacyTable = _legacyPage.Q("legacy-stats");
+            _deleteButton = panel.Q<Button>("delete-history-button");
 
+            SetPlayerNames(_generalPage);
             SetPlayerNames(_localPage);
-            SetPlayerNames(_legacyTable);
         }
 
-        private enum Tab
+        /// <summary>El usuario pulsó "Eliminar registro" en la pestaña indicada.</summary>
+        public event Action<HistorySection> DeleteRequested;
+
+        public HistorySection CurrentSection { get; private set; } = HistorySection.Overall;
+
+        public Button DefaultFocus => _tabGeneral;
+
+        public static string GetSectionName(HistorySection section)
         {
-            VsAi,
-            TwoPlayer,
-            Legacy,
+            switch (section)
+            {
+                case HistorySection.Overall: return "general";
+                case HistorySection.VsAi: return "contra la IA";
+                case HistorySection.TwoPlayer: return "de dos jugadores";
+                default: throw new ArgumentOutOfRangeException(nameof(section), section, "Sección desconocida.");
+            }
         }
 
-        public Button DefaultFocus => _tabAi;
+        /// <summary>Texto de la advertencia: cuántas partidas se borran y qué registros no cambian.</summary>
+        public static string GetDeleteMessage(HistorySection section, int gamesPlayed)
+        {
+            var games = gamesPlayed == 1 ? "la 1 partida" : $"las {gamesPlayed} partidas";
+            string untouched;
+            switch (section)
+            {
+                case HistorySection.Overall:
+                    untouched = "Los registros contra la IA y de dos jugadores no cambian.";
+                    break;
+                case HistorySection.VsAi:
+                    untouched = "El registro general y el de dos jugadores no cambian.";
+                    break;
+                case HistorySection.TwoPlayer:
+                    untouched = "El registro general y el de contra la IA no cambian.";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(section), section, "Sección desconocida.");
+            }
+
+            return $"Se borrarán {games} del registro {GetSectionName(section)}. {untouched}\nEsta acción no se puede deshacer.";
+        }
 
         public void Bind()
         {
-            _tabAi.RegisterCallback<ClickEvent, Tab>(HandleTabClicked, Tab.VsAi);
-            _tabLocal.RegisterCallback<ClickEvent, Tab>(HandleTabClicked, Tab.TwoPlayer);
-            _tabLegacy.RegisterCallback<ClickEvent, Tab>(HandleTabClicked, Tab.Legacy);
+            _tabGeneral.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.Overall);
+            _tabAi.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.VsAi);
+            _tabLocal.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.TwoPlayer);
+            _deleteButton.clicked += RequestDelete;
         }
 
         public void Unbind()
         {
-            _tabAi.UnregisterCallback<ClickEvent, Tab>(HandleTabClicked);
-            _tabLocal.UnregisterCallback<ClickEvent, Tab>(HandleTabClicked);
-            _tabLegacy.UnregisterCallback<ClickEvent, Tab>(HandleTabClicked);
+            _tabGeneral.UnregisterCallback<ClickEvent, HistorySection>(HandleTabClicked);
+            _tabAi.UnregisterCallback<ClickEvent, HistorySection>(HandleTabClicked);
+            _tabLocal.UnregisterCallback<ClickEvent, HistorySection>(HandleTabClicked);
+            _deleteButton.clicked -= RequestDelete;
         }
 
+        /// <summary>Pinta el histórico y conserva la pestaña que estaba seleccionada.</summary>
         public void Show(MatchHistory history)
         {
-            if (history == null)
-                throw new ArgumentNullException(nameof(history));
+            _history = history ?? throw new ArgumentNullException(nameof(history));
 
+            FillColorTable(_generalPage, history.Overall);
             _aiGames.text = history.VsAi.GamesPlayed.ToString();
             FillAiRow(_aiEasy, history.VsAi, AiDifficulty.Easy);
             FillAiRow(_aiNormal, history.VsAi, AiDifficulty.Normal);
             FillAiRow(_aiHard, history.VsAi, AiDifficulty.Hard);
             FillColorTable(_localPage, history.TwoPlayer);
-            FillColorTable(_legacyTable, history.Legacy);
 
-            _hasLegacy = history.HasLegacy;
-            _tabLegacy.EnableInClassList(HiddenClass, !_hasLegacy);
-            if (_current == Tab.Legacy && !_hasLegacy)
-                _current = Tab.VsAi;
-            Select(_current);
+            Select(CurrentSection);
         }
 
-        private void HandleTabClicked(ClickEvent evt, Tab tab) => Select(tab);
-
-        private void Select(Tab tab)
+        internal void Select(HistorySection section)
         {
-            _current = tab;
-            _tabAi.EnableInClassList(SelectedClass, tab == Tab.VsAi);
-            _tabLocal.EnableInClassList(SelectedClass, tab == Tab.TwoPlayer);
-            _tabLegacy.EnableInClassList(SelectedClass, tab == Tab.Legacy);
+            CurrentSection = section;
+            _tabGeneral.EnableInClassList(SelectedClass, section == HistorySection.Overall);
+            _tabAi.EnableInClassList(SelectedClass, section == HistorySection.VsAi);
+            _tabLocal.EnableInClassList(SelectedClass, section == HistorySection.TwoPlayer);
 
-            _aiPage.EnableInClassList(HiddenClass, tab != Tab.VsAi);
-            _localPage.EnableInClassList(HiddenClass, tab != Tab.TwoPlayer);
-            _legacyPage.EnableInClassList(HiddenClass, tab != Tab.Legacy || !_hasLegacy);
+            _generalPage.EnableInClassList(HiddenClass, section != HistorySection.Overall);
+            _aiPage.EnableInClassList(HiddenClass, section != HistorySection.VsAi);
+            _localPage.EnableInClassList(HiddenClass, section != HistorySection.TwoPlayer);
+
+            _deleteButton.text = "Eliminar registro " + GetSectionName(section);
+            _deleteButton.SetEnabled(_history != null && _history.GetGamesPlayed(section) > 0);
         }
+
+        internal void RequestDelete()
+        {
+            if (_history != null && _history.GetGamesPlayed(CurrentSection) > 0)
+                DeleteRequested?.Invoke(CurrentSection);
+        }
+
+        private void HandleTabClicked(ClickEvent evt, HistorySection section) => Select(section);
 
         private static void FillAiRow(VisualElement row, AiMatchStats stats, AiDifficulty difficulty)
         {

@@ -18,9 +18,12 @@ namespace Triki.Tests
         [TestCase("mode-ai"), TestCase("mode-local")]
         [TestCase("difficulty-easy"), TestCase("difficulty-normal"), TestCase("difficulty-hard")]
         [TestCase("color-one"), TestCase("color-two")]
-        [TestCase("tab-ai"), TestCase("tab-local"), TestCase("tab-legacy")]
-        [TestCase("history-ai"), TestCase("history-local"), TestCase("history-legacy"), TestCase("legacy-stats")]
+        [TestCase("tab-general"), TestCase("tab-ai"), TestCase("tab-local")]
+        [TestCase("history-general"), TestCase("history-ai"), TestCase("history-local")]
         [TestCase("ai-games"), TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
+        [TestCase("delete-history-button")]
+        [TestCase("confirm-overlay"), TestCase("confirm-title"), TestCase("confirm-message")]
+        [TestCase("confirm-accept"), TestCase("confirm-cancel")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);
 
         // HistoryView busca estos nombres dentro de cada fila de dificultad.
@@ -33,7 +36,7 @@ namespace Triki.Tests
         }
 
         // Y estos dentro de cada instancia de ColorStatsTable.uxml.
-        [TestCase("history-local"), TestCase("legacy-stats")]
+        [TestCase("history-general"), TestCase("history-local")]
         public void ColorTable_HasStatLabels(string table)
         {
             var element = Clone("MainMenu.uxml").Q(table);
@@ -53,6 +56,7 @@ namespace Triki.Tests
             Assert.IsFalse(root.Q("main-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("history-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("setup-panel").ClassListContains("hidden"));
+            Assert.IsTrue(root.Q("confirm-overlay").ClassListContains("hidden"), "El diálogo empieza cerrado.");
         }
 
         [Test]

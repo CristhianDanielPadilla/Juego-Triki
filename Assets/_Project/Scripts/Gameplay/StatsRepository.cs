@@ -75,13 +75,13 @@ namespace Triki.Gameplay
 
                 if (data.version < CurrentVersion)
                 {
-                    // v1 (v0.1.x): campos planos sin modo de juego -> sección "Anteriores".
-                    history.Legacy.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
+                    // v1 (v0.1.x): campos planos sin modo de juego -> solo al registro general.
+                    history.Overall.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
                 }
                 else
                 {
                     Restore(history.TwoPlayer, data.twoPlayer);
-                    Restore(history.Legacy, data.legacy);
+                    Restore(history.Overall, data.overall);
                     Restore(history.VsAi, AiDifficulty.Easy, data.vsAi?.easy);
                     Restore(history.VsAi, AiDifficulty.Normal, data.vsAi?.normal);
                     Restore(history.VsAi, AiDifficulty.Hard, data.vsAi?.hard);
@@ -90,7 +90,7 @@ namespace Triki.Gameplay
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is FormatException)
             {
                 Debug.LogWarning($"No se pudo leer el histórico en '{FilePath}'; se empieza de cero. {e.Message}");
-                history.Clear();
+                history.ClearAll();
             }
 
             return history;
@@ -125,7 +125,7 @@ namespace Triki.Gameplay
             {
                 version = CurrentVersion,
                 twoPlayer = ToData(history.TwoPlayer),
-                legacy = ToData(history.Legacy),
+                overall = ToData(history.Overall),
                 vsAi = new AiStatsData
                 {
                     easy = ToData(history.VsAi, AiDifficulty.Easy),
@@ -197,7 +197,7 @@ namespace Triki.Gameplay
             public int version;
             public ColorStatsData twoPlayer;
             public AiStatsData vsAi;
-            public ColorStatsData legacy;
+            public ColorStatsData overall;
 
             // Solo v1 (lectura).
             public int gamesPlayed;

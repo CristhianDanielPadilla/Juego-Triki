@@ -3,7 +3,9 @@ using Triki.Core;
 
 namespace Triki.Gameplay
 {
-    /// <summary>Anota el resultado de una partida en la sección del histórico que le corresponde.</summary>
+    /// <summary>
+    /// Anota el resultado de una partida en el registro general y en el de su modo.
+    /// </summary>
     public static class HistoryRecorder
     {
         /// <param name="winner"><see cref="Player.None"/> si fue empate.</param>
@@ -12,12 +14,11 @@ namespace Triki.Gameplay
             if (history == null)
                 throw new ArgumentNullException(nameof(history));
 
+            RecordByColor(history.Overall, winner);
+
             if (!settings.VsAi)
             {
-                if (winner == Player.None)
-                    history.TwoPlayer.RecordDraw();
-                else
-                    history.TwoPlayer.RecordWin(winner);
+                RecordByColor(history.TwoPlayer, winner);
                 return;
             }
 
@@ -27,6 +28,14 @@ namespace Triki.Gameplay
                 history.VsAi.RecordWin(settings.Difficulty);
             else
                 history.VsAi.RecordLoss(settings.Difficulty);
+        }
+
+        private static void RecordByColor(MatchStats stats, Player winner)
+        {
+            if (winner == Player.None)
+                stats.RecordDraw();
+            else
+                stats.RecordWin(winner);
         }
     }
 }

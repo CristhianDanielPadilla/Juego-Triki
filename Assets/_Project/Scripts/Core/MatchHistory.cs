@@ -1,31 +1,52 @@
+using System;
+
 namespace Triki.Core
 {
     /// <summary>
-    /// Histórico completo, separado por modo de juego.
+    /// Histórico completo. Cada partida se anota en <see cref="Overall"/> y en la sección de su modo.
+    /// Los registros son independientes: borrar uno no modifica los demás.
     /// </summary>
     public sealed class MatchHistory
     {
-        /// <summary>Partidas de dos jugadores en la misma PC, por color.</summary>
-        public MatchStats TwoPlayer { get; } = new MatchStats();
+        /// <summary>
+        /// Todas las partidas, por color. Incluye las guardadas antes de separar por modo (v0.1.x).
+        /// </summary>
+        public MatchStats Overall { get; } = new MatchStats();
 
         /// <summary>Partidas contra la IA, desde el punto de vista del humano.</summary>
         public AiMatchStats VsAi { get; } = new AiMatchStats();
 
-        /// <summary>
-        /// Partidas guardadas antes de separar por modo (v0.1.x): no se sabe si fueron contra la IA.
-        /// Solo se leen; las partidas nuevas nunca se suman aquí.
-        /// </summary>
-        public MatchStats Legacy { get; } = new MatchStats();
+        /// <summary>Partidas de dos jugadores en la misma PC, por color.</summary>
+        public MatchStats TwoPlayer { get; } = new MatchStats();
 
-        public bool HasLegacy => Legacy.GamesPlayed > 0;
-
-        public int GamesPlayed => TwoPlayer.GamesPlayed + VsAi.GamesPlayed + Legacy.GamesPlayed;
-
-        public void Clear()
+        public int GetGamesPlayed(HistorySection section)
         {
-            TwoPlayer.Clear();
+            switch (section)
+            {
+                case HistorySection.Overall: return Overall.GamesPlayed;
+                case HistorySection.VsAi: return VsAi.GamesPlayed;
+                case HistorySection.TwoPlayer: return TwoPlayer.GamesPlayed;
+                default: throw new ArgumentOutOfRangeException(nameof(section), section, "Sección desconocida.");
+            }
+        }
+
+        /// <summary>Borra solo el registro indicado.</summary>
+        public void Clear(HistorySection section)
+        {
+            switch (section)
+            {
+                case HistorySection.Overall: Overall.Clear(); break;
+                case HistorySection.VsAi: VsAi.Clear(); break;
+                case HistorySection.TwoPlayer: TwoPlayer.Clear(); break;
+                default: throw new ArgumentOutOfRangeException(nameof(section), section, "Sección desconocida.");
+            }
+        }
+
+        public void ClearAll()
+        {
+            Overall.Clear();
             VsAi.Clear();
-            Legacy.Clear();
+            TwoPlayer.Clear();
         }
     }
 }

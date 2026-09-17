@@ -142,12 +142,65 @@
     margin-bottom: 24px;
 }
 
-.history-note {
-    font-size: 24px;
-    color: var(--color-muted);
+.menu-button--danger-outline {
+    margin-top: 20px;
+    color: var(--color-player-one);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 2px;
+    border-color: var(--color-player-one);
+}
+
+.menu-button--danger-outline:hover,
+.menu-button--danger-outline:focus {
+    background-color: rgba(242, 92, 84, 0.15);
+}
+
+.menu-button--danger-outline:disabled {
+    opacity: 0.35;
+}
+
+.menu-button--danger {
+    background-color: rgb(200, 60, 55);
+    -unity-font-style: bold;
+}
+
+.menu-button--danger:hover,
+.menu-button--danger:focus {
+    background-color: rgb(225, 75, 70);
+}
+
+/* ---------- Diálogo de confirmación ---------- */
+
+.overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.65);
+}
+
+.dialog {
+    max-width: 760px;
+}
+
+.dialog__message {
+    font-size: 30px;
     white-space: normal;
-    max-width: 640px;
-    margin-bottom: 16px;
+    -unity-text-align: middle-center;
+    margin-bottom: 24px;
+}
+
+.dialog__actions {
+    flex-direction: row;
+}
+
+.dialog__button {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 10px 8px;
 }
 
 .stat-total {

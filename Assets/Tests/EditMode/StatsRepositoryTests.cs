@@ -36,8 +36,8 @@ namespace Triki.Tests
         {
             var history = _repository.Load();
 
-            Assert.AreEqual(0, history.GamesPlayed);
-            Assert.IsFalse(history.HasLegacy);
+            Assert.AreEqual(0, history.GetGamesPlayed(HistorySection.Overall));
+            Assert.AreEqual(0, history.GetGamesPlayed(HistorySection.VsAi));
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace Triki.Tests
             history.VsAi.RecordLoss(AiDifficulty.Hard);
             history.VsAi.RecordLoss(AiDifficulty.Hard);
             history.VsAi.RecordDraw(AiDifficulty.Normal);
-            history.Legacy.Restore(5, 1, 2, 2, 2, 2);
+            history.Overall.Restore(5, 1, 2, 2, 2, 2);
 
             _repository.Save(history);
             var loaded = _repository.Load();
@@ -69,8 +69,7 @@ namespace Triki.Tests
             Assert.AreEqual(1, loaded.VsAi.GetDraws(AiDifficulty.Normal));
             Assert.AreEqual(2, loaded.VsAi.GetLosses(AiDifficulty.Hard));
 
-            Assert.AreEqual(5, loaded.Legacy.GamesPlayed);
-            Assert.AreEqual(12, loaded.GamesPlayed);
+            Assert.AreEqual(5, loaded.Overall.GamesPlayed);
         }
 
         [Test]
@@ -95,17 +94,16 @@ namespace Triki.Tests
         }
 
         [Test]
-        public void Load_V1File_GoesToLegacySection()
+        public void Load_V1File_GoesToOverallOnly()
         {
             WriteFile(_repository.FilePath, V1File);
 
             var history = _repository.Load();
 
-            Assert.IsTrue(history.HasLegacy);
-            Assert.AreEqual(6, history.Legacy.GamesPlayed);
-            Assert.AreEqual(1, history.Legacy.Draws);
-            Assert.AreEqual(3, history.Legacy.GetWins(Player.One));
-            Assert.AreEqual(3, history.Legacy.GetLosses(Player.Two));
+            Assert.AreEqual(6, history.Overall.GamesPlayed);
+            Assert.AreEqual(1, history.Overall.Draws);
+            Assert.AreEqual(3, history.Overall.GetWins(Player.One));
+            Assert.AreEqual(3, history.Overall.GetLosses(Player.Two));
             Assert.AreEqual(0, history.TwoPlayer.GamesPlayed);
             Assert.AreEqual(0, history.VsAi.GamesPlayed);
         }
@@ -118,12 +116,12 @@ namespace Triki.Tests
 
             var history = _repository.Load();
 
-            Assert.AreEqual(2, history.Legacy.GamesPlayed);
-            Assert.AreEqual(0, history.Legacy.Draws);
+            Assert.AreEqual(2, history.Overall.GamesPlayed);
+            Assert.AreEqual(0, history.Overall.Draws);
         }
 
         [Test]
-        public void LegacySection_SurvivesNewGames()
+        public void V1Data_SurvivesNewGames()
         {
             WriteFile(_repository.FilePath, V1File);
             var history = _repository.Load();
@@ -132,8 +130,27 @@ namespace Triki.Tests
             _repository.Save(history);
             var reloaded = _repository.Load();
 
-            Assert.AreEqual(6, reloaded.Legacy.GamesPlayed);
+            Assert.AreEqual(6, reloaded.Overall.GamesPlayed);
             Assert.AreEqual(1, reloaded.VsAi.GamesPlayed);
+        }
+
+        [Test]
+        public void DeletingOneSection_IsPersisted_AndKeepsTheOthers()
+        {
+            var history = new MatchHistory();
+            HistoryRecorder.Record(history, new MatchSettings(true, AiDifficulty.Easy, Player.One), Player.One);
+            HistoryRecorder.Record(history, new MatchSettings(false, AiDifficulty.Easy, Player.One), Player.Two);
+            _repository.Save(history);
+
+            // Igual que el menú: releer, borrar una sección y guardar.
+            var loaded = _repository.Load();
+            loaded.Clear(HistorySection.VsAi);
+            _repository.Save(loaded);
+            var reloaded = _repository.Load();
+
+            Assert.AreEqual(0, reloaded.VsAi.GamesPlayed);
+            Assert.AreEqual(1, reloaded.TwoPlayer.GamesPlayed);
+            Assert.AreEqual(2, reloaded.Overall.GamesPlayed, "El registro general no cambia.");
         }
 
         [Test]
@@ -168,7 +185,7 @@ namespace Triki.Tests
 
             var history = repository.Load();
 
-            Assert.AreEqual(6, history.Legacy.GamesPlayed, "Un archivo de v0.1.x va a la sección Anteriores.");
+            Assert.AreEqual(6, history.Overall.GamesPlayed, "Un archivo de v0.1.x va al registro general.");
             Assert.IsTrue(File.Exists(repository.FilePath), "Debe quedar la copia en la ruta nueva.");
             Assert.IsTrue(File.Exists(oldPath), "El original se conserva como respaldo.");
         }
@@ -185,8 +202,8 @@ namespace Triki.Tests
 
             var history = repository.Load();
 
-            Assert.AreEqual(1, history.GamesPlayed);
-            Assert.IsFalse(history.HasLegacy);
+            Assert.AreEqual(1, history.TwoPlayer.GamesPlayed);
+            Assert.AreEqual(0, history.Overall.GamesPlayed, "No se leyó el archivo de la compañía anterior.");
         }
 
         [Test]
@@ -196,7 +213,7 @@ namespace Triki.Tests
                 Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName),
                 Path.Combine(_directory, "no-existe", StatsRepository.DefaultFileName));
 
-            Assert.AreEqual(0, repository.Load().GamesPlayed);
+            Assert.AreEqual(0, repository.Load().Overall.GamesPlayed);
             Assert.IsFalse(File.Exists(repository.FilePath));
         }
 
@@ -210,7 +227,8 @@ namespace Triki.Tests
 
             var history = _repository.Load();
 
-            Assert.AreEqual(0, history.GamesPlayed);
+            foreach (HistorySection section in System.Enum.GetValues(typeof(HistorySection)))
+                Assert.AreEqual(0, history.GetGamesPlayed(section));
         }
 
         private static void WriteFile(string path, string content)

@@ -1,3 +1,4 @@
+using System;
 using Triki.Core;
 using Triki.Gameplay;
 using UnityEngine;
@@ -37,6 +38,9 @@ namespace Triki.UI
         private Button _colorTwo;
 
         private HistoryView _historyView;
+        private ConfirmDialog _confirmDialog;
+        private Action _deleteConfirmed;
+        private HistorySection _pendingDelete;
         private MatchSettings _settings;
 
         private void OnEnable()
@@ -71,6 +75,11 @@ namespace Triki.UI
 
             _historyView = new HistoryView(_historyPanel);
             _historyView.Bind();
+            _historyView.DeleteRequested += HandleDeleteRequested;
+
+            _confirmDialog = new ConfirmDialog(root.Q("confirm-overlay"));
+            _confirmDialog.Bind();
+            _deleteConfirmed = DeletePendingSection;
 
             _playButton.clicked += ShowSetup;
             _historyButton.clicked += ShowHistory;
@@ -113,7 +122,9 @@ namespace Triki.UI
             _difficultyHard.UnregisterCallback<ClickEvent, AiDifficulty>(HandleDifficultyClicked);
             _colorOne.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
             _colorTwo.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
+            _historyView.DeleteRequested -= HandleDeleteRequested;
             _historyView.Unbind();
+            _confirmDialog.Unbind();
         }
 
         private void ShowMain()
@@ -135,6 +146,29 @@ namespace Triki.UI
             // Se lee al abrir: así siempre refleja las partidas jugadas desde el último vistazo.
             _historyView.Show(new StatsRepository().Load());
             ShowOnly(_historyPanel);
+            _historyView.DefaultFocus.Focus();
+        }
+
+        private void HandleDeleteRequested(HistorySection section)
+        {
+            var history = new StatsRepository().Load();
+            _pendingDelete = section;
+            _confirmDialog.Show(
+                $"¿Eliminar el registro {HistoryView.GetSectionName(section)}?",
+                HistoryView.GetDeleteMessage(section, history.GetGamesPlayed(section)),
+                "Eliminar",
+                _deleteConfirmed);
+        }
+
+        private void DeletePendingSection()
+        {
+            // Se relee del disco para no pisar partidas guardadas desde que se abrió el panel.
+            var repository = new StatsRepository();
+            var history = repository.Load();
+            history.Clear(_pendingDelete);
+            repository.Save(history);
+
+            _historyView.Show(history);
             _historyView.DefaultFocus.Focus();
         }
 

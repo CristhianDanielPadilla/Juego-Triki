@@ -50,6 +50,59 @@ namespace Triki.Tests
         }
     }
 
+    public class MatchHistoryTests
+    {
+        private MatchHistory _history;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _history = new MatchHistory();
+            _history.Overall.RecordWin(Player.One);
+            _history.VsAi.RecordWin(AiDifficulty.Easy);
+            _history.VsAi.RecordLoss(AiDifficulty.Hard);
+            _history.TwoPlayer.RecordDraw();
+        }
+
+        [Test]
+        public void GetGamesPlayed_ReportsEachSection()
+        {
+            Assert.AreEqual(1, _history.GetGamesPlayed(HistorySection.Overall));
+            Assert.AreEqual(2, _history.GetGamesPlayed(HistorySection.VsAi));
+            Assert.AreEqual(1, _history.GetGamesPlayed(HistorySection.TwoPlayer));
+        }
+
+        [TestCase(HistorySection.Overall)]
+        [TestCase(HistorySection.VsAi)]
+        [TestCase(HistorySection.TwoPlayer)]
+        public void Clear_OnlyEmptiesThatSection(HistorySection section)
+        {
+            var before = new[]
+            {
+                _history.GetGamesPlayed(HistorySection.Overall),
+                _history.GetGamesPlayed(HistorySection.VsAi),
+                _history.GetGamesPlayed(HistorySection.TwoPlayer),
+            };
+
+            _history.Clear(section);
+
+            foreach (HistorySection other in Enum.GetValues(typeof(HistorySection)))
+            {
+                var expected = other == section ? 0 : before[(int)other];
+                Assert.AreEqual(expected, _history.GetGamesPlayed(other), other.ToString());
+            }
+        }
+
+        [Test]
+        public void ClearAll_EmptiesEverything()
+        {
+            _history.ClearAll();
+
+            foreach (HistorySection section in Enum.GetValues(typeof(HistorySection)))
+                Assert.AreEqual(0, _history.GetGamesPlayed(section));
+        }
+    }
+
     public class HistoryRecorderTests
     {
         private MatchHistory _history;
@@ -58,7 +111,7 @@ namespace Triki.Tests
         public void SetUp() => _history = new MatchHistory();
 
         [Test]
-        public void TwoPlayers_RecordsByColor()
+        public void TwoPlayers_RecordsByColor_InTwoPlayerAndOverall()
         {
             var local = new MatchSettings(false, AiDifficulty.Hard, Player.One);
 
@@ -68,6 +121,8 @@ namespace Triki.Tests
             Assert.AreEqual(2, _history.TwoPlayer.GamesPlayed);
             Assert.AreEqual(1, _history.TwoPlayer.GetWins(Player.Two));
             Assert.AreEqual(1, _history.TwoPlayer.Draws);
+            Assert.AreEqual(2, _history.Overall.GamesPlayed);
+            Assert.AreEqual(1, _history.Overall.GetWins(Player.Two));
             Assert.AreEqual(0, _history.VsAi.GamesPlayed);
         }
 
@@ -75,7 +130,7 @@ namespace Triki.Tests
         [TestCase(Player.Two, Player.Two, true, TestName = "Humano Azul gana")]
         [TestCase(Player.One, Player.Two, false, TestName = "Humano Rojo pierde")]
         [TestCase(Player.Two, Player.One, false, TestName = "Humano Azul pierde")]
-        public void VsAi_RecordsFromHumanPerspective(Player human, Player winner, bool humanWins)
+        public void VsAi_RecordsFromHumanPerspective_AndOverallByColor(Player human, Player winner, bool humanWins)
         {
             var vsAi = new MatchSettings(true, AiDifficulty.Normal, human);
 
@@ -83,21 +138,23 @@ namespace Triki.Tests
 
             Assert.AreEqual(humanWins ? 1 : 0, _history.VsAi.GetWins(AiDifficulty.Normal));
             Assert.AreEqual(humanWins ? 0 : 1, _history.VsAi.GetLosses(AiDifficulty.Normal));
+            Assert.AreEqual(1, _history.Overall.GetWins(winner), "El general registra el color ganador.");
             Assert.AreEqual(0, _history.TwoPlayer.GamesPlayed);
         }
 
         [Test]
-        public void VsAi_Draw_UsesDifficulty_AndNeverTouchesLegacy()
+        public void VsAi_Draw_UsesDifficulty()
         {
             HistoryRecorder.Record(_history, new MatchSettings(true, AiDifficulty.Hard, Player.One), Player.None);
 
             Assert.AreEqual(1, _history.VsAi.GetDraws(AiDifficulty.Hard));
-            Assert.IsFalse(_history.HasLegacy);
+            Assert.AreEqual(1, _history.Overall.Draws);
         }
     }
 
     public class HistoryViewTests
     {
+        private VisualElement _root;
         private VisualElement _panel;
         private HistoryView _view;
 
@@ -105,18 +162,22 @@ namespace Triki.Tests
         public void SetUp()
         {
             var tree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/_Project/UI/MainMenu.uxml");
-            _panel = tree.CloneTree().Q("history-panel");
+            _root = tree.CloneTree();
+            _panel = _root.Q("history-panel");
             _view = new HistoryView(_panel);
         }
 
         [Test]
         public void Show_FillsEachSection()
         {
-            var history = new MatchHistory();
-            history.VsAi.Restore(AiDifficulty.Hard, 3, 7, 1);
-            history.TwoPlayer.RecordWin(Player.Two);
+            var history = SampleHistory();
 
             _view.Show(history);
+
+            var general = _panel.Q("history-general");
+            Assert.AreEqual("3", general.Q<Label>("games").text);
+            Assert.AreEqual("2", general.Q<Label>("player-one-wins").text);
+            Assert.AreEqual("Rojo", general.Q<Label>("player-one-name").text);
 
             Assert.AreEqual("11", _panel.Q("history-ai").Q<Label>("ai-games").text);
             var hard = _panel.Q("ai-hard");
@@ -125,34 +186,102 @@ namespace Triki.Tests
             Assert.AreEqual("1", hard.Q<Label>("draws").text);
 
             var local = _panel.Q("history-local");
-            Assert.AreEqual("1", local.Q<Label>("games").text);
-            Assert.AreEqual("1", local.Q<Label>("player-two-wins").text);
-            Assert.AreEqual("Rojo", local.Q<Label>("player-one-name").text);
+            Assert.AreEqual("0", local.Q<Label>("games").text);
         }
 
         [Test]
-        public void Show_StartsOnAiTab_AndHidesLegacyWhenEmpty()
+        public void Show_StartsOnGeneralTab()
         {
-            _view.Show(new MatchHistory());
+            _view.Show(SampleHistory());
 
-            Assert.IsFalse(IsHidden("history-ai"));
+            Assert.AreEqual(HistorySection.Overall, _view.CurrentSection);
+            Assert.IsFalse(IsHidden("history-general"));
+            Assert.IsTrue(IsHidden("history-ai"));
             Assert.IsTrue(IsHidden("history-local"));
-            Assert.IsTrue(IsHidden("history-legacy"));
-            Assert.IsTrue(IsHidden("tab-legacy"), "Sin partidas anteriores no hay pestaña.");
-            Assert.IsTrue(_panel.Q("tab-ai").ClassListContains("segment--selected"));
+            Assert.IsTrue(_panel.Q("tab-general").ClassListContains("segment--selected"));
+        }
+
+        [TestCase(HistorySection.Overall, "Eliminar registro general", true)]
+        [TestCase(HistorySection.VsAi, "Eliminar registro contra la IA", true)]
+        [TestCase(HistorySection.TwoPlayer, "Eliminar registro de dos jugadores", false)]
+        public void DeleteButton_NamesTheTab_AndIsDisabledWhenEmpty(HistorySection section, string text, bool enabled)
+        {
+            _view.Show(SampleHistory());
+
+            _view.Select(section);
+
+            var button = _panel.Q<Button>("delete-history-button");
+            Assert.AreEqual(text, button.text);
+            Assert.AreEqual(enabled, button.enabledSelf);
+            Assert.IsFalse(IsHidden(PageOf(section)));
         }
 
         [Test]
-        public void Show_WithLegacy_ShowsLegacyTabAndData()
+        public void RequestDelete_RaisesCurrentSection_OnlyWhenThereIsData()
+        {
+            HistorySection? requested = null;
+            _view.DeleteRequested += section => requested = section;
+            _view.Show(SampleHistory());
+
+            _view.Select(HistorySection.TwoPlayer);
+            _view.RequestDelete();
+            Assert.IsNull(requested, "Sin partidas no se pide borrar.");
+
+            _view.Select(HistorySection.VsAi);
+            _view.RequestDelete();
+            Assert.AreEqual(HistorySection.VsAi, requested);
+        }
+
+        [Test]
+        public void DeleteMessage_SaysWhatIsDeletedAndWhatIsKept()
+        {
+            var one = HistoryView.GetDeleteMessage(HistorySection.VsAi, 1);
+            var many = HistoryView.GetDeleteMessage(HistorySection.Overall, 10);
+
+            StringAssert.Contains("la 1 partida del registro contra la IA", one);
+            StringAssert.Contains("El registro general y el de dos jugadores no cambian", one);
+            StringAssert.Contains("las 10 partidas del registro general", many);
+            StringAssert.Contains("no se puede deshacer", many);
+        }
+
+        [Test]
+        public void ConfirmDialog_ConfirmRunsActionOnce_AndCancelDoesNot()
+        {
+            var dialog = new ConfirmDialog(_root.Q("confirm-overlay"));
+            var runs = 0;
+
+            Assert.IsFalse(dialog.IsOpen, "Empieza cerrado.");
+
+            dialog.Show("¿Eliminar?", "Mensaje", "Eliminar", () => runs++);
+            Assert.IsTrue(dialog.IsOpen);
+            Assert.AreEqual("Mensaje", _root.Q<Label>("confirm-message").text);
+            dialog.Cancel();
+            Assert.IsFalse(dialog.IsOpen);
+            Assert.AreEqual(0, runs);
+
+            dialog.Show("¿Eliminar?", "Mensaje", "Eliminar", () => runs++);
+            dialog.Confirm();
+            dialog.Confirm(); // un segundo clic con el diálogo ya cerrado no repite la acción
+            Assert.IsFalse(dialog.IsOpen);
+            Assert.AreEqual(1, runs);
+        }
+
+        private static MatchHistory SampleHistory()
         {
             var history = new MatchHistory();
-            history.Legacy.Restore(6, 1, 3, 2, 2, 3);
+            history.Overall.Restore(3, 0, 2, 1, 1, 2);
+            history.VsAi.Restore(AiDifficulty.Hard, 3, 7, 1);
+            return history;
+        }
 
-            _view.Show(history);
-
-            Assert.IsFalse(IsHidden("tab-legacy"));
-            Assert.AreEqual("6", _panel.Q("legacy-stats").Q<Label>("games").text);
-            Assert.IsTrue(IsHidden("history-legacy"), "La pestaña existe pero no está seleccionada.");
+        private static string PageOf(HistorySection section)
+        {
+            switch (section)
+            {
+                case HistorySection.Overall: return "history-general";
+                case HistorySection.VsAi: return "history-ai";
+                default: return "history-local";
+            }
         }
 
         private bool IsHidden(string name) => _panel.Q(name).ClassListContains("hidden");
