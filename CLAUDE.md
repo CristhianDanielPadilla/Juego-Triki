@@ -82,7 +82,25 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Siguientes pasos sugeridos: CI con GameCI (tests en cada PR) y etiqueta `v0.1.0`.
+- Siguiente paso sugerido: etiqueta `v0.1.0`.
+
+## CI (GitHub Actions)
+
+- `.github/workflows/tests.yml`: tests EditMode en cada PR, en cada push a `main` y a mano
+  (Actions > Tests > Run workflow). Resumen en la pagina de la ejecucion; XML y log como artefacto.
+- Corre en un **runner self-hosted** (esta PC, etiquetas `self-hosted, Windows, unity`) usando el
+  Unity instalado (`C:\Program Files\Unity\Hub\Editor\<version de ProjectVersion.txt>`).
+  - Por que no GameCI en la nube: las licencias Personal de Unity 6 van ligadas a la maquina
+    (`Machine bindings don't match`) y la activacion con correo/contraseña no pasa el 2FA.
+  - Si la PC esta apagada, los jobs quedan en cola (GitHub los cancela a las 24 h).
+  - El runner usa su propia copia del repo (fuera de OneDrive), no la carpeta del editor.
+  - Conserva `Library` entre ejecuciones (`clean: false` + `git clean -ffdx -e /Library/`).
+  - No usar este runner si el repo pasa a ser publico: ejecutaria codigo de PRs ajenos.
+- Registrar el runner (una vez): Settings > Actions > Runners > New self-hosted runner > Windows,
+  seguir los comandos que da GitHub en `C:\actions-runner`, y en `config.cmd` añadir la etiqueta
+  `unity`. Ejecutarlo con `run.cmd` o como servicio con la cuenta del usuario (la licencia de Unity
+  es por usuario; con la cuenta por defecto del servicio Unity no estaria activado).
+- Los secretos `UNITY_*` de la version con GameCI ya no se usan y se pueden borrar.
 
 ## Reglas del juego (resumen)
 

@@ -1,0 +1,113 @@
+# Tests EditMode de Unity en cada pull request y en cada cambio de main.
+# Corre en un runner self-hosted (la PC de desarrollo, con Unity ya activado): las licencias
+# Personal de Unity 6 quedan ligadas a la máquina y no sirven en los runners de GitHub.
+# Ver la sección CI de CLAUDE.md para registrar el runner.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Un push nuevo a la misma rama cancela la ejecución anterior.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  editmode:
+    name: EditMode
+    runs-on: [self-hosted, Windows, unity]
+    timeout-minutes: 30
+
+    # La política de ejecución de la PC bloquea los .ps1 que genera el runner. -ExecutionPolicy
+    # Bypass solo afecta a este proceso; no cambia la política del sistema.
+    defaults:
+      run:
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          lfs: true
+          # Conserva Library (caché de importación de Unity) entre ejecuciones.
+          clean: false
+
+      - name: Limpiar el workspace salvo Library
+        # Con un shell personalizado el runner no propaga solo el código de salida del último comando.
+        run: |
+          git clean -ffdx -e /Library/
+          exit $LASTEXITCODE
+
+      - name: Tests EditMode
+        env:
+          UNITY_EDITORS_DIR: C:\Program Files\Unity\Hub\Editor
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $versionLine = Select-String -Path 'ProjectSettings/ProjectVersion.txt' -Pattern '^m_EditorVersion:\s*(\S+)'
+          $version = $versionLine.Matches[0].Groups[1].Value
+          $unity = Join-Path $env:UNITY_EDITORS_DIR "$version\Editor\Unity.exe"
+          if (-not (Test-Path $unity)) {
+            Write-Output "::error::Unity $version no está instalado en $unity"
+            exit 1
+          }
+
+          $results = Join-Path $PWD 'test-results'
+          New-Item -ItemType Directory -Force $results | Out-Null
+          $xml = Join-Path $results 'editmode.xml'
+          $log = Join-Path $results 'editmode.log'
+
+          # Unity.exe es una aplicación de ventana: sin -Wait, PowerShell no espera a que termine.
+          $arguments = @(
+            '-batchmode', '-nographics',
+            '-projectPath', "`"$PWD`"",
+            '-runTests', '-testPlatform', 'EditMode',
+            '-testResults', "`"$xml`"",
+            '-logFile', "`"$log`""
+          )
+          $process = Start-Process -FilePath $unity -ArgumentList $arguments -Wait -PassThru
+          Write-Output "Unity $version terminó con código $($process.ExitCode)"
+
+          if (-not (Test-Path $xml)) {
+            Write-Output "::error::Unity no generó resultados (código $($process.ExitCode)). Últimas líneas del log:"
+            Get-Content $log -Tail 40
+            exit 1
+          }
+
+          $document = [xml](Get-Content $xml -Raw -Encoding UTF8)
+          $run = $document.'test-run'
+          $summary = "### Tests EditMode`n`n| Resultado | Total | Pasan | Fallan | Omitidos |`n|---|---|---|---|---|`n"
+          $summary += "| $($run.result) | $($run.total) | $($run.passed) | $($run.failed) | $($run.skipped) |`n"
+
+          $failedCases = $document.SelectNodes("//test-case[@result='Failed']")
+          if ($failedCases.Count -gt 0) {
+            $summary += "`n**Tests fallidos:**`n"
+            foreach ($case in $failedCases) {
+              $message = ($case.failure.message.InnerText -split "`n")[0].Trim()
+              Write-Output "::error title=Test fallido::$($case.fullname): $message"
+              $summary += "- ``$($case.fullname)``: $message`n"
+            }
+          }
+
+          $utf8 = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $summary, $utf8)
+          Write-Output "Resultado: $($run.result) · $($run.passed)/$($run.total) pasan"
+
+          if ($run.failed -ne '0' -or $process.ExitCode -ne 0) {
+            exit 1
+          }
+
+      - name: Subir resultados
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 14
