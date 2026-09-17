@@ -104,8 +104,10 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Versionado semantico con etiquetas anotadas en `main` (`vMAJOR.MINOR.PATCH`). La version del
   juego esta en Player Settings (`bundleVersion` en `ProjectSettings.asset`) y debe coincidir con
   la etiqueta: subirla en un PR antes de etiquetar.
-- `v0.1.0` (primera version jugable) etiquetada y publicada como release de GitHub con el build de
-  Windows x64 en zip.
+- Publicadas como release de GitHub, con el build de Windows x64 en zip:
+  - `v0.1.0`: primera version jugable (compañia `DefaultCompany`).
+  - `v0.1.1`: compañia `CDCompany`, identificador `com.cdcompany.juegotriki` y migracion del
+    historico a la nueva carpeta de datos.
 - Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
   carpeta "DontShip" -> `gh release create vX.Y.Z <zip> --notes-file <notas>`.
 
