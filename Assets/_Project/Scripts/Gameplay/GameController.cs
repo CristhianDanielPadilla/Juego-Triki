@@ -29,6 +29,7 @@ namespace Triki.Gameplay
         private float _aiCountdown = NoAiPending;
         private StatsRepository _statsRepository;
         private MatchHistory _history;
+        private IPointerBlocker _pointerBlocker;
 
         /// <summary>Partida en curso; la UI se suscribe a sus eventos. Disponible desde <c>Start</c>.</summary>
         public TrikiGame Game => _game;
@@ -40,6 +41,14 @@ namespace Triki.Gameplay
         public bool IsAiPlayer(Player player) => _ai != null && player == _settings.AiPlayer;
 
         public void RestartGame() => _game?.Reset();
+
+        /// <summary>
+        /// Registra la capa de interfaz que puede quedarse con el clic; <c>null</c> lo quita.
+        /// El área sensible de las casillas de abajo sobresale del tablero y llega a solaparse con
+        /// los botones del HUD: sin esto, pulsar el borde de "Reiniciar" tocaba además la casilla
+        /// que quedaba justo encima.
+        /// </summary>
+        public void SetPointerBlocker(IPointerBlocker blocker) => _pointerBlocker = blocker;
 
         private void Awake()
         {
@@ -142,6 +151,9 @@ namespace Triki.Gameplay
                 return;
 
             var screen = pointer.position.ReadValue();
+            if (_pointerBlocker != null && _pointerBlocker.BlocksPointer(screen))
+                return;
+
             var world = _camera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, 0f));
             if (!_boardView.TryGetCell(world, out var cell))
             {

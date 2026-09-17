@@ -66,7 +66,8 @@ namespace Triki.Tests
             _scene = EditorSceneManager.OpenPreviewScene(GameScene);
 
             AssertSingleWired<GameController>("_boardView", "_camera");
-            AssertSingleWired<GameHud>("_document", "_gameController");
+            var hud = AssertSingleWired<GameHud>("_document", "_gameController");
+            Assert.IsInstanceOf<IPointerBlocker>(hud, "El HUD debe quedarse con los clics de sus botones.");
             AssertSingleWired<SafeAreaPadding>("_document");
             AssertSingleWired<AudioFeedback>("_gameController");
             var fitter = AssertSingleWired<CameraFitter>("_boardView");

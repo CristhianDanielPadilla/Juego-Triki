@@ -48,6 +48,28 @@ namespace Triki.Tests
         [TestCase("status-label"), TestCase("restart-button"), TestCase("menu-button")]
         public void GameHud_HasElement(string elementName) => AssertHasElement("GameHud.uxml", elementName);
 
+        /// <summary>
+        /// <see cref="Triki.UI.GameHud.BlocksPointer"/> decide con <c>panel.Pick</c> qué clics son
+        /// suyos. Cualquier capa del HUD que no se ignore se tragaría los clics del tablero que
+        /// tiene debajo, así que solo los botones pueden recibirlos.
+        /// </summary>
+        [Test]
+        public void GameHud_OnlyButtonsCatchClicks()
+        {
+            var root = Clone("GameHud.uxml");
+
+            foreach (var element in root.Query<VisualElement>().Build())
+            {
+                if (element == root)
+                    continue;
+
+                var expected = element is Button ? PickingMode.Position : PickingMode.Ignore;
+                var label = string.IsNullOrEmpty(element.name) ? element.GetType().Name : element.name;
+                Assert.AreEqual(expected, element.pickingMode,
+                    $"'{label}' debe tener picking-mode {expected} para no robarle clics al tablero.");
+            }
+        }
+
         [Test]
         public void MainMenu_StartsOnMainPanel()
         {
