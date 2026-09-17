@@ -228,6 +228,19 @@ namespace Triki.Gameplay
             return true;
         }
 
+        /// <summary>
+        /// Mitad del ancho y alto que ocupa el tablero en el mundo, incluido lo que sobresale de
+        /// las casillas de los bordes (anillo de selección, fichas agrandadas al ganar).
+        /// </summary>
+        public Vector2 GetWorldHalfExtents()
+        {
+            var cells = (BoardGraph.Size - 1) * 0.5f * _spacing;
+            var overhang = Mathf.Max(_nodeDiameter, _pieceDiameter * _winPieceScale, _selectionDiameter) * 0.5f;
+            var local = new Vector2(cells + overhang, cells + overhang);
+            var scale = transform.lossyScale;
+            return new Vector2(local.x * Mathf.Abs(scale.x), local.y * Mathf.Abs(scale.y));
+        }
+
         public Vector3 GetCellLocalPosition(int cell)
         {
             var half = (BoardGraph.Size - 1) * 0.5f;

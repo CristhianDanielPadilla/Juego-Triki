@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Triki.Core",
-        "Triki.Gameplay"
+        "Triki.Gameplay",
+        "Triki.UI"
     ],
     "includePlatforms": [
         "Editor"
