@@ -6,6 +6,7 @@
             <ui:Label text="Tres en línea con movimiento" class="subtitle" />
             <ui:Button name="play-button" text="Iniciar partida" class="menu-button menu-button--primary" />
             <ui:Button name="history-button" text="Histórico de partidas" class="menu-button" />
+            <ui:Button name="sound-button" text="Sonido: Sí" class="menu-button" />
             <ui:Button name="quit-button" text="Salir" class="menu-button" />
         </ui:VisualElement>
 

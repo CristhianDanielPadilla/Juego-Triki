@@ -14,7 +14,7 @@ namespace Triki.Tests
 
         [TestCase("main-panel"), TestCase("history-panel"), TestCase("setup-panel"), TestCase("ai-options")]
         [TestCase("play-button"), TestCase("history-button"), TestCase("quit-button"), TestCase("back-button")]
-        [TestCase("start-button"), TestCase("setup-back-button")]
+        [TestCase("start-button"), TestCase("setup-back-button"), TestCase("sound-button")]
         [TestCase("mode-ai"), TestCase("mode-local")]
         [TestCase("difficulty-easy"), TestCase("difficulty-normal"), TestCase("difficulty-hard")]
         [TestCase("color-one"), TestCase("color-two")]

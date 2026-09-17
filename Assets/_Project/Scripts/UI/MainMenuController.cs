@@ -23,6 +23,7 @@ namespace Triki.UI
         private Button _playButton;
         private Button _historyButton;
         private Button _quitButton;
+        private Button _soundButton;
         private Button _startButton;
         private Button _setupBackButton;
         private Button _historyBackButton;
@@ -63,6 +64,7 @@ namespace Triki.UI
             _playButton = root.Q<Button>("play-button");
             _historyButton = root.Q<Button>("history-button");
             _quitButton = root.Q<Button>("quit-button");
+            _soundButton = root.Q<Button>("sound-button");
             _startButton = root.Q<Button>("start-button");
             _setupBackButton = root.Q<Button>("setup-back-button");
             _historyBackButton = root.Q<Button>("back-button");
@@ -90,6 +92,7 @@ namespace Triki.UI
             _playButton.clicked += ShowSetup;
             _historyButton.clicked += ShowHistory;
             _quitButton.clicked += SceneNavigator.QuitApplication;
+            _soundButton.clicked += ToggleSound;
             _startButton.clicked += StartMatch;
             _setupBackButton.clicked += ShowMain;
             _historyBackButton.clicked += ShowMain;
@@ -102,6 +105,8 @@ namespace Triki.UI
             _colorOne.RegisterCallback<ClickEvent, Player>(HandleColorClicked, Player.One);
             _colorTwo.RegisterCallback<ClickEvent, Player>(HandleColorClicked, Player.Two);
 
+            AudioPreferences.Apply();
+            RefreshSoundButton();
             ShowMain();
         }
 
@@ -113,6 +118,7 @@ namespace Triki.UI
             _playButton.clicked -= ShowSetup;
             _historyButton.clicked -= ShowHistory;
             _quitButton.clicked -= SceneNavigator.QuitApplication;
+            _soundButton.clicked -= ToggleSound;
             _startButton.clicked -= StartMatch;
             _setupBackButton.clicked -= ShowMain;
             _historyBackButton.clicked -= ShowMain;
@@ -153,6 +159,17 @@ namespace Triki.UI
 
             ShowOnly(_historyPanel);
             _historyBackButton.Focus();
+        }
+
+        private void ToggleSound()
+        {
+            AudioPreferences.SetMuted(!AudioPreferences.IsMuted);
+            RefreshSoundButton();
+        }
+
+        private void RefreshSoundButton()
+        {
+            _soundButton.text = AudioPreferences.IsMuted ? "Sonido: No" : "Sonido: Sí";
         }
 
         private void StartMatch()
