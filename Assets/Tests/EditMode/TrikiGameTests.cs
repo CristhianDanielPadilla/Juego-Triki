@@ -26,9 +26,9 @@ namespace Triki.Tests
         [Test]
         public void TryPlace_OccupiesCell_AndPassesTurn()
         {
-            Assert.AreEqual(PlaceResult.Placed, _game.TryPlace(4));
+            Assert.AreEqual(PlaceResult.Placed, _game.TryPlace(0));
 
-            Assert.AreEqual(Player.One, _game.Board[4]);
+            Assert.AreEqual(Player.One, _game.Board[0]);
             Assert.AreEqual(Player.Two, _game.CurrentPlayer);
             Assert.AreEqual(2, _game.GetPiecesInHand(Player.One));
         }
@@ -36,10 +36,10 @@ namespace Triki.Tests
         [Test]
         public void TryPlace_OnOccupiedCell_IsRejected_AndKeepsTurn()
         {
-            _game.TryPlace(4);
+            _game.TryPlace(0);
 
-            Assert.AreEqual(PlaceResult.CellOccupied, _game.TryPlace(4));
-            Assert.AreEqual(Player.One, _game.Board[4]);
+            Assert.AreEqual(PlaceResult.CellOccupied, _game.TryPlace(0));
+            Assert.AreEqual(Player.One, _game.Board[0]);
             Assert.AreEqual(Player.Two, _game.CurrentPlayer);
             Assert.AreEqual(3, _game.GetPiecesInHand(Player.Two));
         }

@@ -66,6 +66,8 @@ namespace Triki.Gameplay
         [SerializeField] private Color _boardColor = new Color(0.13f, 0.15f, 0.19f);
         [SerializeField] private Color _edgeColor = new Color(0.45f, 0.49f, 0.58f);
         [SerializeField] private Color _nodeColor = new Color(0.82f, 0.85f, 0.91f);
+        [Tooltip("Casilla vetada (el centro en la primera colocación). Apagada, como un botón deshabilitado.")]
+        [SerializeField] private Color _blockedNodeColor = new Color(0.38f, 0.41f, 0.47f);
         [SerializeField] private Color _shadowColor = new Color(0f, 0f, 0f, 0.4f);
         [SerializeField] private Color _playerOneColor = new Color(0.95f, 0.36f, 0.33f);
         [SerializeField] private Color _playerTwoColor = new Color(0.29f, 0.64f, 0.96f);
@@ -73,6 +75,7 @@ namespace Triki.Gameplay
         private readonly int[] _pieceAtCell = new int[BoardGraph.CellCount];
         private readonly SpriteRenderer[] _piecePool = new SpriteRenderer[TrikiGame.PiecesPerPlayer * 2];
         private readonly Tween[] _pieceTweens = new Tween[TrikiGame.PiecesPerPlayer * 2];
+        private readonly SpriteRenderer[] _nodes = new SpriteRenderer[BoardGraph.CellCount];
         private readonly SpriteRenderer[] _hints = new SpriteRenderer[BoardGraph.CellCount];
         private int _piecesInUse;
         private SpriteRenderer _winLine;
@@ -145,6 +148,7 @@ namespace Triki.Gameplay
             {
                 var node = CreateRenderer("Node " + cell, nodesRoot, circle, _nodeColor, NodeSortingOrder);
                 PlaceCircle(node, cell, _nodeDiameter);
+                _nodes[cell] = node;
 
                 var hint = CreateRenderer("Hint " + cell, hintsRoot, circle, _hintColor, HintSortingOrder);
                 PlaceCircle(hint, cell, _hintDiameter);
@@ -209,6 +213,19 @@ namespace Triki.Gameplay
             CompleteTween(index);
             var start = _piecePool[index].transform.localPosition;
             StartPieceTween(index, TweenKind.Slide, start, GetCellLocalPosition(to), _moveDuration);
+        }
+
+        /// <summary>
+        /// Apaga una casilla para avisar de que no se puede usar; <see cref="TrikiGame.NoCell"/>
+        /// (-1) quita la marca. Se usa con el centro durante la primera colocación.
+        /// </summary>
+        public void ShowBlockedCell(int cell)
+        {
+            for (var i = 0; i < _nodes.Length; i++)
+            {
+                if (_nodes[i] != null)
+                    _nodes[i].color = i == cell ? _blockedNodeColor : _nodeColor;
+            }
         }
 
         /// <summary>Marca la ficha elegida y las casillas a las que puede ir (bits de <paramref name="targetMask"/>).</summary>

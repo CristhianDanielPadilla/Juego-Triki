@@ -7,8 +7,12 @@ namespace Triki.Core
     {
         public const int DefaultMaxMovementMoves = 60;
         public const int DefaultRepetitionLimit = 3;
+        public const bool DefaultBanCenterOpening = true;
 
-        public TrikiRules(int maxMovementMoves = DefaultMaxMovementMoves, int repetitionLimit = DefaultRepetitionLimit)
+        public TrikiRules(
+            int maxMovementMoves = DefaultMaxMovementMoves,
+            int repetitionLimit = DefaultRepetitionLimit,
+            bool banCenterOpening = DefaultBanCenterOpening)
         {
             if (maxMovementMoves < 1)
                 throw new ArgumentOutOfRangeException(nameof(maxMovementMoves), maxMovementMoves, "Debe permitir al menos un movimiento.");
@@ -17,6 +21,7 @@ namespace Triki.Core
 
             MaxMovementMoves = maxMovementMoves;
             RepetitionLimit = repetitionLimit;
+            BanCenterOpening = banCenterOpening;
         }
 
         public static TrikiRules Default { get; } = new TrikiRules();
@@ -26,5 +31,13 @@ namespace Triki.Core
 
         /// <summary>Veces que puede aparecer la misma posición, con el mismo jugador por mover, antes del empate.</summary>
         public int RepetitionLimit { get; }
+
+        /// <summary>
+        /// Prohíbe poner la primera ficha de la partida en <see cref="BoardGraph.CenterCell"/>.
+        /// Sin esta regla el juego está resuelto: quien empieza toma el centro y gana siempre.
+        /// Con ella, el juego perfecto acaba en tablas. Es la regla de casa habitual de esta variante.
+        /// Apagarla devuelve el comportamiento de v0.2.x.
+        /// </summary>
+        public bool BanCenterOpening { get; }
     }
 }

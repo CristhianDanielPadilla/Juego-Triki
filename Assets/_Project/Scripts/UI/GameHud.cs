@@ -123,6 +123,11 @@ namespace Triki.UI
                     _restartButton.text = "Reiniciar";
                     break;
 
+                case GamePhase.Placement when _game.ForbiddenCell != TrikiGame.NoCell:
+                    SetStatus(_game.CurrentPlayer, $"Turno de {GetDisplayName(_game.CurrentPlayer)}: coloca la primera ficha fuera del centro");
+                    _restartButton.text = "Reiniciar";
+                    break;
+
                 case GamePhase.Placement:
                     var inHand = _game.GetPiecesInHand(_game.CurrentPlayer);
                     SetStatus(_game.CurrentPlayer, $"Turno de {GetDisplayName(_game.CurrentPlayer)}: coloca una ficha ({inHand} en mano)");

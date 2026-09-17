@@ -19,6 +19,9 @@ namespace Triki.Core
     {
         public const int PiecesPerPlayer = 3;
 
+        /// <summary>Valor de <see cref="ForbiddenCell"/> cuando no hay ninguna casilla vetada.</summary>
+        public const int NoCell = -1;
+
         // Indexado por (int)Player; la posición 0 (None) no se usa.
         private readonly int[] _piecesPlaced = new int[3];
         private readonly BoardLine[] _winLines;
@@ -74,6 +77,16 @@ namespace Triki.Core
 
         /// <summary>Movimientos hechos en la fase de movimiento (de ambos jugadores).</summary>
         public int MovementMovesPlayed { get; private set; }
+
+        /// <summary>La partida no tiene ninguna ficha todavía: toca la primera colocación.</summary>
+        public bool IsOpeningMove => Phase == GamePhase.Placement &&
+                                     _piecesPlaced[(int)Player.One] + _piecesPlaced[(int)Player.Two] == 0;
+
+        /// <summary>
+        /// Casilla que ahora mismo no se puede usar, o <see cref="NoCell"/> si no hay ninguna.
+        /// La vista la marca para que el veto se vea antes de intentar la jugada.
+        /// </summary>
+        public int ForbiddenCell => Rules.BanCenterOpening && IsOpeningMove ? BoardGraph.CenterCell : NoCell;
 
         /// <summary>La partida terminó sin ganador.</summary>
         public bool IsDraw => Phase == GamePhase.GameOver && Winner == Player.None;
@@ -132,6 +145,8 @@ namespace Triki.Core
                 return PlaceResult.InvalidCell;
             if (!Board.IsEmpty(cell))
                 return PlaceResult.CellOccupied;
+            if (cell == ForbiddenCell)
+                return PlaceResult.ForbiddenOpening;
 
             var player = CurrentPlayer;
             Board.Set(cell, player);

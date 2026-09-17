@@ -158,6 +158,24 @@ namespace Triki.Tests
         public void TearDown() => Object.DestroyImmediate(_root);
 
         [Test]
+        public void ShowBlockedCell_DimsOnlyThatNode()
+        {
+            var free = NodeColor(0);
+
+            _view.ShowBlockedCell(BoardGraph.CenterCell);
+
+            Assert.AreNotEqual(free, NodeColor(BoardGraph.CenterCell), "El centro vetado debe verse distinto.");
+            Assert.AreEqual(free, NodeColor(0), "Las demás casillas no cambian.");
+
+            _view.ShowBlockedCell(TrikiGame.NoCell);
+
+            Assert.AreEqual(free, NodeColor(BoardGraph.CenterCell), "Sin veto vuelve a su color.");
+        }
+
+        private Color NodeColor(int cell) =>
+            _root.transform.Find("Nodes/Node " + cell).GetComponent<SpriteRenderer>().color;
+
+        [Test]
         public void ShowPiece_StartsHidden_AndPopsToFullSize()
         {
             _view.ShowPiece(4, Player.One);

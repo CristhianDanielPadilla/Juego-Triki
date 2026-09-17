@@ -68,6 +68,7 @@ namespace Triki.Gameplay
 
             _game = new TrikiGame();
             _boardView.Build(_game.Board.Graph);
+            _boardView.ShowBlockedCell(_game.ForbiddenCell);
             _pressAction = new InputAction("Press", InputActionType.Button, "<Pointer>/press");
         }
 
@@ -200,7 +201,13 @@ namespace Triki.Gameplay
             _boardView.HideSelection();
         }
 
-        private void HandlePiecePlaced(int cell, Player player) => _boardView.ShowPiece(cell, player);
+        private void HandlePiecePlaced(int cell, Player player)
+        {
+            _boardView.ShowPiece(cell, player);
+
+            // Con la primera ficha ya puesta, el centro deja de estar vetado.
+            _boardView.ShowBlockedCell(_game.ForbiddenCell);
+        }
 
         private void HandlePieceMoved(int from, int to, Player player)
         {
@@ -238,6 +245,7 @@ namespace Triki.Gameplay
         {
             _selectedCell = NoSelection;
             _boardView.ClearPieces();
+            _boardView.ShowBlockedCell(_game.ForbiddenCell);
             ScheduleAiIfNeeded();
         }
     }

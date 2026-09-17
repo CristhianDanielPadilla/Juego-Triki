@@ -168,6 +168,15 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 
 - Colocacion (3 fichas por jugador) -> movimiento por aristas. Gana quien hace linea (en cualquier
   fase) o deja al rival sin movimientos.
+- **La primera ficha de la partida no puede ir al centro** (`TrikiRules.BanCenterOpening`, activa
+  por defecto; apagarla devuelve el juego de v0.2.x). Sin esa regla el juego esta resuelto: quien
+  abre en el centro gana siempre (Dificil contra Dificil, 40 de 40; abrir en un borde regala la
+  partida al rival). Con ella, el juego perfecto acaba en tablas.
+  - El veto lo aplican `TrikiGame.TryPlace` (devuelve `PlaceResult.ForbiddenOpening`) y
+    `TrikiAi.GenerateMoves`. Si cambia uno, cambiar el otro.
+  - `TrikiGame.ForbiddenCell` dice que casilla esta vetada ahora mismo (`TrikiGame.NoCell` = -1 si
+    ninguna). `BoardView.ShowBlockedCell` la apaga y el HUD lo explica: si no se ve, el jugador
+    pulsa el centro y parece que el juego no responde.
 - Empate en la fase de movimiento: misma posicion (fichas + quien mueve) 3 veces, o 60
   movimientos sin ganador. Valores en `TrikiRules`; la victoria tiene prioridad sobre el empate.
 
@@ -188,8 +197,10 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 
 - `Triki.Core/AI/TrikiAi`: negamax + alfa-beta sobre enteros, buffers creados una vez (sin
   asignaciones por jugada). Facil = 50 % azar + profundidad 1, Normal = 3, Dificil = 8.
-- Su `Apply` debe replicar el orden de reglas de `TrikiGame` (linea -> bloqueo -> limite). Si cambian
-  las reglas, cambiar ambos. La repeticion no se modela en la busqueda.
+- Su `Apply` debe replicar el orden de reglas de `TrikiGame` (linea -> bloqueo -> limite) y su
+  `GenerateMoves`, el veto del centro en la apertura. Si cambian las reglas, cambiar ambos.
+  La repeticion no se modela en la busqueda: con el centro vetado las partidas llegan al final,
+  asi que la IA puede repetir posiciones sin ver que esta forzando tablas.
 - Recibe `System.Random` para poder fijar la semilla en tests.
 - La configuracion de partida (modo, dificultad, color) va del menu al juego por `PlayerPrefs`
   (`MatchSettingsStore`), no por estaticos: el proyecto no recarga el dominio al entrar en Play.

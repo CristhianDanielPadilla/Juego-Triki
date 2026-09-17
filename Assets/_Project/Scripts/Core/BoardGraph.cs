@@ -20,6 +20,12 @@ namespace Triki.Core
         public const int Size = 3;
         public const int CellCount = Size * Size;
 
+        /// <summary>
+        /// Casilla del medio. En el cuadrado con diagonales toca las otras ocho, y por eso quien
+        /// la ocupa primero gana la partida: <see cref="TrikiRules.BanCenterOpening"/> lo impide.
+        /// </summary>
+        public const int CenterCell = CellCount / 2;
+
         private readonly ushort[] _neighborMasks = new ushort[CellCount];
         private readonly byte[] _edgeFrom;
         private readonly byte[] _edgeTo;
