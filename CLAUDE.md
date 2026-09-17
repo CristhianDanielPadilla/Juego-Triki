@@ -122,7 +122,10 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   - `v0.1.1`: compañia `CDCompany`, identificador `com.cdcompany.juegotriki` y migracion del
     historico a la nueva carpeta de datos.
   - `v0.2.0`: historico con pestañas General / Contra la IA / Dos jugadores y borrado por
-    registro con confirmacion (formato de archivo 2).- Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
+    registro con confirmacion (formato de archivo 2).
+  - `v0.2.1`: boton "Eliminar registro" mas compacto. La etiqueta se rehizo antes de publicar: la
+    primera `v0.2.1` (nunca publicada) incluia un boton de "borrar todo" que se descarto.
+- Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
   carpeta "DontShip" -> `gh release create vX.Y.Z <zip> --notes-file <notas>`.
 
 ## CI (GitHub Actions)
