@@ -140,13 +140,15 @@ namespace Triki.Gameplay
                 if (!string.IsNullOrEmpty(directory))
                     Directory.CreateDirectory(directory);
 
-                // Se escribe a un temporal y se reemplaza: si el juego se cierra a mitad,
-                // el archivo anterior sigue intacto.
+                // Se escribe a un temporal y se reemplaza de golpe: si el juego se cierra a mitad,
+                // el archivo anterior sigue intacto. File.Replace es atómico; borrar y mover no lo
+                // era (entre las dos operaciones no existía ningún histórico).
                 var tempPath = FilePath + ".tmp";
                 File.WriteAllText(tempPath, JsonUtility.ToJson(data, true));
                 if (File.Exists(FilePath))
-                    File.Delete(FilePath);
-                File.Move(tempPath, FilePath);
+                    File.Replace(tempPath, FilePath, null);
+                else
+                    File.Move(tempPath, FilePath);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
