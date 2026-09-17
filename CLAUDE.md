@@ -35,6 +35,13 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - `SceneWiringTests` abre las escenas en preview y falla si falta un script o una referencia.
   Si se edita una escena a mano (YAML), correr los tests antes de commitear.
 - El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`).
+  En Windows: `%USERPROFILE%\AppData\LocalLow\CDCompany\Juego-Triki\`.
+  - Compañia `CDCompany` e identificador `com.cdcompany.juegotriki` (Player Settings). v0.1.0 salio
+    con `DefaultCompany`: si falta el historico, `StatsRepository` copia el de
+    `LocalLow\DefaultCompany\Juego-Triki` (el original queda como respaldo). Las preferencias en
+    PlayerPrefs (registro, clave por compañia) no se migran: volvieron a sus valores por defecto.
+  - Cambiar compañia o producto vuelve a mover los datos: actualizar `LegacyCompanyName` o ampliar
+    la migracion.
 
 ## Reglas de arquitectura
 
