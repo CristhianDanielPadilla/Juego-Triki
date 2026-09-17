@@ -39,6 +39,15 @@ jobs:
             exit 1
           fi
 
+      # La imagen de Unity ocupa varios GB y el runner trae poco espacio libre.
+      # Se borran SDKs preinstalados que este proyecto no usa.
+      - name: Liberar espacio en disco
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          df -h /
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -61,7 +70,9 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
-          # La versión de Unity se lee de ProjectSettings/ProjectVersion.txt.
+          # Sin esto GameCI elige la imagen linux-il2cpp, mucho más pesada; para tests basta la base.
+          # Al actualizar Unity, cambiar la versión aquí y en ProjectVersion.txt.
+          customImage: unityci/editor:ubuntu-6000.6.0f1-base-3
           testMode: editmode
           artifactsPath: test-results
           githubToken: ${{ secrets.GITHUB_TOKEN }}
