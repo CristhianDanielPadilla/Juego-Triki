@@ -96,27 +96,10 @@ namespace Triki.Tests
         [Test]
         public void ClearAll_EmptiesEverything()
         {
-            Assert.IsFalse(_history.IsEmpty);
-
             _history.ClearAll();
 
-            Assert.IsTrue(_history.IsEmpty);
             foreach (HistorySection section in Enum.GetValues(typeof(HistorySection)))
                 Assert.AreEqual(0, _history.GetGamesPlayed(section));
-        }
-
-        [TestCase(HistorySection.Overall)]
-        [TestCase(HistorySection.VsAi)]
-        [TestCase(HistorySection.TwoPlayer)]
-        public void IsEmpty_IsFalse_WhileAnySectionHasGames(HistorySection keep)
-        {
-            foreach (HistorySection section in Enum.GetValues(typeof(HistorySection)))
-            {
-                if (section != keep)
-                    _history.Clear(section);
-            }
-
-            Assert.IsFalse(_history.IsEmpty);
         }
     }
 
@@ -247,45 +230,6 @@ namespace Triki.Tests
             _view.Select(HistorySection.VsAi);
             _view.RequestDelete();
             Assert.AreEqual(HistorySection.VsAi, requested);
-        }
-
-        [Test]
-        public void DeleteAllButton_IsEnabledOnEveryTab_UnlessEverythingIsEmpty()
-        {
-            var button = _panel.Q<Button>("delete-all-history-button");
-
-            _view.Show(SampleHistory());
-            _view.Select(HistorySection.TwoPlayer); // pestaña vacía, pero hay datos en otras
-            Assert.IsTrue(button.enabledSelf);
-
-            _view.Show(new MatchHistory());
-            Assert.IsFalse(button.enabledSelf);
-        }
-
-        [Test]
-        public void RequestDeleteAll_RaisesOnlyWhenThereIsData()
-        {
-            var requests = 0;
-            _view.DeleteAllRequested += () => requests++;
-
-            _view.Show(new MatchHistory());
-            _view.RequestDeleteAll();
-            Assert.AreEqual(0, requests);
-
-            _view.Show(SampleHistory());
-            _view.RequestDeleteAll();
-            Assert.AreEqual(1, requests);
-        }
-
-        [Test]
-        public void DeleteAllMessage_ListsEverySection()
-        {
-            var message = HistoryView.GetDeleteAllMessage(SampleHistory());
-
-            StringAssert.Contains("General: 3 partidas", message);
-            StringAssert.Contains("Contra la IA: 11 partidas", message);
-            StringAssert.Contains("Dos jugadores: 0 partidas", message);
-            StringAssert.Contains("no se puede deshacer", message);
         }
 
         [Test]

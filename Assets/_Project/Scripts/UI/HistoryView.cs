@@ -25,7 +25,6 @@ namespace Triki.UI
         private readonly VisualElement _aiNormal;
         private readonly VisualElement _aiHard;
         private readonly Button _deleteButton;
-        private readonly Button _deleteAllButton;
 
         private MatchHistory _history;
 
@@ -45,7 +44,6 @@ namespace Triki.UI
             _aiNormal = _aiPage.Q("ai-normal");
             _aiHard = _aiPage.Q("ai-hard");
             _deleteButton = panel.Q<Button>("delete-history-button");
-            _deleteAllButton = panel.Q<Button>("delete-all-history-button");
 
             SetPlayerNames(_generalPage);
             SetPlayerNames(_localPage);
@@ -53,9 +51,6 @@ namespace Triki.UI
 
         /// <summary>El usuario pulsó "Eliminar registro" en la pestaña indicada.</summary>
         public event Action<HistorySection> DeleteRequested;
-
-        /// <summary>El usuario pulsó "Borrar todo el histórico".</summary>
-        public event Action DeleteAllRequested;
 
         public HistorySection CurrentSection { get; private set; } = HistorySection.Overall;
 
@@ -95,26 +90,12 @@ namespace Triki.UI
             return $"Se borrarán {games} del registro {GetSectionName(section)}. {untouched}\nEsta acción no se puede deshacer.";
         }
 
-        /// <summary>Texto de la advertencia de borrar todo, con las partidas de cada registro.</summary>
-        public static string GetDeleteAllMessage(MatchHistory history)
-        {
-            if (history == null)
-                throw new ArgumentNullException(nameof(history));
-
-            return "Se borrarán los tres registros:\n"
-                   + $"General: {CountGames(history.Overall.GamesPlayed)} · "
-                   + $"Contra la IA: {CountGames(history.VsAi.GamesPlayed)} · "
-                   + $"Dos jugadores: {CountGames(history.TwoPlayer.GamesPlayed)}\n"
-                   + "Esta acción no se puede deshacer.";
-        }
-
         public void Bind()
         {
             _tabGeneral.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.Overall);
             _tabAi.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.VsAi);
             _tabLocal.RegisterCallback<ClickEvent, HistorySection>(HandleTabClicked, HistorySection.TwoPlayer);
             _deleteButton.clicked += RequestDelete;
-            _deleteAllButton.clicked += RequestDeleteAll;
         }
 
         public void Unbind()
@@ -123,7 +104,6 @@ namespace Triki.UI
             _tabAi.UnregisterCallback<ClickEvent, HistorySection>(HandleTabClicked);
             _tabLocal.UnregisterCallback<ClickEvent, HistorySection>(HandleTabClicked);
             _deleteButton.clicked -= RequestDelete;
-            _deleteAllButton.clicked -= RequestDeleteAll;
         }
 
         /// <summary>Pinta el histórico y conserva la pestaña que estaba seleccionada.</summary>
@@ -154,19 +134,12 @@ namespace Triki.UI
 
             _deleteButton.text = "Eliminar registro " + GetSectionName(section);
             _deleteButton.SetEnabled(_history != null && _history.GetGamesPlayed(section) > 0);
-            _deleteAllButton.SetEnabled(_history != null && !_history.IsEmpty);
         }
 
         internal void RequestDelete()
         {
             if (_history != null && _history.GetGamesPlayed(CurrentSection) > 0)
                 DeleteRequested?.Invoke(CurrentSection);
-        }
-
-        internal void RequestDeleteAll()
-        {
-            if (_history != null && !_history.IsEmpty)
-                DeleteAllRequested?.Invoke();
         }
 
         private void HandleTabClicked(ClickEvent evt, HistorySection section) => Select(section);
@@ -187,8 +160,6 @@ namespace Triki.UI
             table.Q<Label>("player-two-wins").text = stats.GetWins(Player.Two).ToString();
             table.Q<Label>("player-two-losses").text = stats.GetLosses(Player.Two).ToString();
         }
-
-        private static string CountGames(int games) => games == 1 ? "1 partida" : $"{games} partidas";
 
         private static void SetPlayerNames(VisualElement table)
         {
