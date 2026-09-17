@@ -28,6 +28,12 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - UI Toolkit, no uGUI. Los scripts buscan elementos por `name`; `UiContractTests` falla si un
   UXML pierde un nombre que el codigo usa. Al renombrar en UXML, actualizar codigo y test.
 - Los colores de jugador estan en `Triki.uss` y en `BoardView` (inspector): mantenerlos iguales.
+- Pantallas: `CameraFitter` (en la camara de Game) encaja el tablero en la zona segura dejando
+  franjas arriba/abajo para el HUD (`_topReserved`/`_bottomReserved`, fraccion de alto). Si el HUD
+  crece, subir esas reservas. `SafeAreaPadding` aplica la zona segura a cada UIDocument.
+  La matematica esta en funciones puras (`CameraFit`, `SafeAreaInsets`) con tests.
+- `SceneWiringTests` abre las escenas en preview y falla si falta un script o una referencia.
+  Si se edita una escena a mano (YAML), correr los tests antes de commitear.
 - El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`).
 
 ## Reglas de arquitectura
@@ -76,7 +82,7 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Proximas ramas previstas: pantallas adaptables, arte y audio.
+- Proximas ramas previstas: arte y audio.
 
 ## Reglas del juego (resumen)
 
