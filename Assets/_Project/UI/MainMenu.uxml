@@ -83,8 +83,11 @@
             <!-- Dos jugadores: por color. -->
             <ui:Instance template="ColorStatsTable" name="history-local" />
 
-            <!-- Borra solo el registro de la pestaña visible, tras confirmar. -->
-            <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline" />
+            <!-- Ambos piden confirmación: el primero borra la pestaña visible; el segundo, todo. -->
+            <ui:VisualElement class="history-actions">
+                <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline history-action" />
+                <ui:Button name="delete-all-history-button" text="Borrar todo el histórico" class="menu-button menu-button--danger history-action" />
+            </ui:VisualElement>
             <ui:Button name="back-button" text="Volver" class="menu-button" />
         </ui:VisualElement>
 
