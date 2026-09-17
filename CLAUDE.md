@@ -86,18 +86,21 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 
 ## CI (GitHub Actions)
 
-- `.github/workflows/tests.yml`: tests EditMode con `game-ci/unity-test-runner@v4` en cada PR,
-  en cada push a `main` y a mano (Actions > Tests > Run workflow). Imagen
-  `unityci/editor:ubuntu-6000.6.0f1-base-3` (la version sale de `ProjectVersion.txt`).
-- Secretos del repositorio (Settings > Secrets and variables > Actions), licencia Personal:
-  - `UNITY_LICENSE`: contenido de `C:\ProgramData\Unity\Unity_lic.ulf`. Se genera en Unity Hub >
-    Preferences > Licenses > Add > Get a free personal license (hay que pulsar Add aunque ya se vea
-    una licencia).
-  - `UNITY_EMAIL` y `UNITY_PASSWORD`: la cuenta de Unity de esa licencia.
-  - Sin ellos el job falla en el primer paso indicando cual falta.
-- La cache de `Library` acelera las ejecuciones siguientes; la primera tarda mas (descarga la imagen
-  e importa todo). El repo es privado: cada ejecucion consume minutos del plan de GitHub.
-- Si se actualiza Unity, comprobar que existe la imagen de GameCI para la nueva version.
+- `.github/workflows/tests.yml`: tests EditMode en cada PR, en cada push a `main` y a mano
+  (Actions > Tests > Run workflow). Resumen en la pagina de la ejecucion; XML y log como artefacto.
+- Corre en un **runner self-hosted** (esta PC, etiquetas `self-hosted, Windows, unity`) usando el
+  Unity instalado (`C:\Program Files\Unity\Hub\Editor\<version de ProjectVersion.txt>`).
+  - Por que no GameCI en la nube: las licencias Personal de Unity 6 van ligadas a la maquina
+    (`Machine bindings don't match`) y la activacion con correo/contraseña no pasa el 2FA.
+  - Si la PC esta apagada, los jobs quedan en cola (GitHub los cancela a las 24 h).
+  - El runner usa su propia copia del repo (fuera de OneDrive), no la carpeta del editor.
+  - Conserva `Library` entre ejecuciones (`clean: false` + `git clean -ffdx -e /Library/`).
+  - No usar este runner si el repo pasa a ser publico: ejecutaria codigo de PRs ajenos.
+- Registrar el runner (una vez): Settings > Actions > Runners > New self-hosted runner > Windows,
+  seguir los comandos que da GitHub en `C:\actions-runner`, y en `config.cmd` añadir la etiqueta
+  `unity`. Ejecutarlo con `run.cmd` o como servicio con la cuenta del usuario (la licencia de Unity
+  es por usuario; con la cuenta por defecto del servicio Unity no estaria activado).
+- Los secretos `UNITY_*` de la version con GameCI ya no se usan y se pueden borrar.
 
 ## Reglas del juego (resumen)
 

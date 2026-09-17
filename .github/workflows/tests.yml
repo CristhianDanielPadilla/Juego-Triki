@@ -1,5 +1,7 @@
 # Tests EditMode de Unity en cada pull request y en cada cambio de main.
-# Requiere los secretos UNITY_LICENSE, UNITY_EMAIL y UNITY_PASSWORD (ver CLAUDE.md).
+# Corre en un runner self-hosted (la PC de desarrollo, con Unity ya activado): las licencias
+# Personal de Unity 6 quedan ligadas a la máquina y no sirven en los runners de GitHub.
+# Ver la sección CI de CLAUDE.md para registrar el runner.
 name: Tests
 
 on:
@@ -8,82 +10,97 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Un push nuevo a la misma rama cancela la ejecución anterior: ahorra minutos.
+# Un push nuevo a la misma rama cancela la ejecución anterior.
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
-  checks: write # para publicar el resumen de tests en el PR
 
 jobs:
   editmode:
     name: EditMode
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, unity]
     timeout-minutes: 30
 
     steps:
-      - name: Comprobar secretos de Unity
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        run: |
-          missing=""
-          if [ -z "$UNITY_LICENSE" ]; then missing="$missing UNITY_LICENSE"; fi
-          if [ -z "$UNITY_EMAIL" ]; then missing="$missing UNITY_EMAIL"; fi
-          if [ -z "$UNITY_PASSWORD" ]; then missing="$missing UNITY_PASSWORD"; fi
-          if [ -n "$missing" ]; then
-            echo "::error::Faltan secretos del repositorio:$missing. Ver la sección CI de CLAUDE.md."
-            exit 1
-          fi
-
-      # La imagen de Unity ocupa varios GB y el runner trae poco espacio libre.
-      # Se borran SDKs preinstalados que este proyecto no usa.
-      - name: Liberar espacio en disco
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          df -h /
-
       - name: Checkout
         uses: actions/checkout@v7
         with:
           lfs: true
+          # Conserva Library (caché de importación de Unity) entre ejecuciones.
+          clean: false
 
-      # Library es la caché de importación de Unity: sin ella cada ejecución reimporta todo.
-      - name: Caché de Library
-        uses: actions/cache@v6
-        with:
-          path: Library
-          key: Library-${{ runner.os }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            Library-${{ runner.os }}-
+      - name: Limpiar el workspace salvo Library
+        shell: powershell
+        run: git clean -ffdx -e /Library/
 
       - name: Tests EditMode
-        id: tests
-        uses: game-ci/unity-test-runner@v4
+        shell: powershell
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          # Sin esto GameCI elige la imagen linux-il2cpp, mucho más pesada; para tests basta la base.
-          # Al actualizar Unity, cambiar la versión aquí y en ProjectVersion.txt.
-          customImage: unityci/editor:ubuntu-6000.6.0f1-base-3
-          testMode: editmode
-          artifactsPath: test-results
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Resultados EditMode
+          UNITY_EDITORS_DIR: C:\Program Files\Unity\Hub\Editor
+        run: |
+          $ErrorActionPreference = 'Stop'
 
-      # También si los tests fallan, pero no si ni siquiera se ejecutaron (no habría ruta).
+          $versionLine = Select-String -Path 'ProjectSettings/ProjectVersion.txt' -Pattern '^m_EditorVersion:\s*(\S+)'
+          $version = $versionLine.Matches[0].Groups[1].Value
+          $unity = Join-Path $env:UNITY_EDITORS_DIR "$version\Editor\Unity.exe"
+          if (-not (Test-Path $unity)) {
+            Write-Output "::error::Unity $version no está instalado en $unity"
+            exit 1
+          }
+
+          $results = Join-Path $PWD 'test-results'
+          New-Item -ItemType Directory -Force $results | Out-Null
+          $xml = Join-Path $results 'editmode.xml'
+          $log = Join-Path $results 'editmode.log'
+
+          # Unity.exe es una aplicación de ventana: sin -Wait, PowerShell no espera a que termine.
+          $arguments = @(
+            '-batchmode', '-nographics',
+            '-projectPath', "`"$PWD`"",
+            '-runTests', '-testPlatform', 'EditMode',
+            '-testResults', "`"$xml`"",
+            '-logFile', "`"$log`""
+          )
+          $process = Start-Process -FilePath $unity -ArgumentList $arguments -Wait -PassThru
+          Write-Output "Unity $version terminó con código $($process.ExitCode)"
+
+          if (-not (Test-Path $xml)) {
+            Write-Output "::error::Unity no generó resultados (código $($process.ExitCode)). Últimas líneas del log:"
+            Get-Content $log -Tail 40
+            exit 1
+          }
+
+          $document = [xml](Get-Content $xml -Raw -Encoding UTF8)
+          $run = $document.'test-run'
+          $summary = "### Tests EditMode`n`n| Resultado | Total | Pasan | Fallan | Omitidos |`n|---|---|---|---|---|`n"
+          $summary += "| $($run.result) | $($run.total) | $($run.passed) | $($run.failed) | $($run.skipped) |`n"
+
+          $failedCases = $document.SelectNodes("//test-case[@result='Failed']")
+          if ($failedCases.Count -gt 0) {
+            $summary += "`n**Tests fallidos:**`n"
+            foreach ($case in $failedCases) {
+              $message = ($case.failure.message.InnerText -split "`n")[0].Trim()
+              Write-Output "::error title=Test fallido::$($case.fullname): $message"
+              $summary += "- ``$($case.fullname)``: $message`n"
+            }
+          }
+
+          $utf8 = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $summary, $utf8)
+          Write-Output "Resultado: $($run.result) · $($run.passed)/$($run.total) pasan"
+
+          if ($run.failed -ne '0' -or $process.ExitCode -ne 0) {
+            exit 1
+          }
+
       - name: Subir resultados
-        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: test-results
-          path: ${{ steps.tests.outputs.artifactsPath }}
+          path: test-results
           if-no-files-found: ignore
           retention-days: 14
