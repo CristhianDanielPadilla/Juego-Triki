@@ -44,64 +44,12 @@ jobs:
           git clean -ffdx -e /Library/
           exit $LASTEXITCODE
 
+      # El script vive en un .ps1 con BOM: Windows PowerShell 5.1 lee como ANSI los scripts
+      # sin BOM que genera el runner y rompería las tildes de los mensajes.
       - name: Tests EditMode
-        env:
-          UNITY_EDITORS_DIR: C:\Program Files\Unity\Hub\Editor
         run: |
-          $ErrorActionPreference = 'Stop'
-
-          $versionLine = Select-String -Path 'ProjectSettings/ProjectVersion.txt' -Pattern '^m_EditorVersion:\s*(\S+)'
-          $version = $versionLine.Matches[0].Groups[1].Value
-          $unity = Join-Path $env:UNITY_EDITORS_DIR "$version\Editor\Unity.exe"
-          if (-not (Test-Path $unity)) {
-            Write-Output "::error::Unity $version no está instalado en $unity"
-            exit 1
-          }
-
-          $results = Join-Path $PWD 'test-results'
-          New-Item -ItemType Directory -Force $results | Out-Null
-          $xml = Join-Path $results 'editmode.xml'
-          $log = Join-Path $results 'editmode.log'
-
-          # Unity.exe es una aplicación de ventana: sin -Wait, PowerShell no espera a que termine.
-          $arguments = @(
-            '-batchmode', '-nographics',
-            '-projectPath', "`"$PWD`"",
-            '-runTests', '-testPlatform', 'EditMode',
-            '-testResults', "`"$xml`"",
-            '-logFile', "`"$log`""
-          )
-          $process = Start-Process -FilePath $unity -ArgumentList $arguments -Wait -PassThru
-          Write-Output "Unity $version terminó con código $($process.ExitCode)"
-
-          if (-not (Test-Path $xml)) {
-            Write-Output "::error::Unity no generó resultados (código $($process.ExitCode)). Últimas líneas del log:"
-            Get-Content $log -Tail 40
-            exit 1
-          }
-
-          $document = [xml](Get-Content $xml -Raw -Encoding UTF8)
-          $run = $document.'test-run'
-          $summary = "### Tests EditMode`n`n| Resultado | Total | Pasan | Fallan | Omitidos |`n|---|---|---|---|---|`n"
-          $summary += "| $($run.result) | $($run.total) | $($run.passed) | $($run.failed) | $($run.skipped) |`n"
-
-          $failedCases = $document.SelectNodes("//test-case[@result='Failed']")
-          if ($failedCases.Count -gt 0) {
-            $summary += "`n**Tests fallidos:**`n"
-            foreach ($case in $failedCases) {
-              $message = ($case.failure.message.InnerText -split "`n")[0].Trim()
-              Write-Output "::error title=Test fallido::$($case.fullname): $message"
-              $summary += "- ``$($case.fullname)``: $message`n"
-            }
-          }
-
-          $utf8 = New-Object System.Text.UTF8Encoding $false
-          [System.IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $summary, $utf8)
-          Write-Output "Resultado: $($run.result) · $($run.passed)/$($run.total) pasan"
-
-          if ($run.failed -ne '0' -or $process.ExitCode -ne 0) {
-            exit 1
-          }
+          & ./.github/scripts/run-editmode-tests.ps1
+          exit $LASTEXITCODE
 
       - name: Subir resultados
         if: ${{ !cancelled() }}
