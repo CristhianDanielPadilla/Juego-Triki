@@ -136,6 +136,9 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
     registro con confirmacion (formato de archivo 2).
   - `v0.2.1`: boton "Eliminar registro" mas compacto. La etiqueta se rehizo antes de publicar: la
     primera `v0.2.1` (nunca publicada) incluia un boton de "borrar todo" que se descarto.
+  - `v0.3.0`: **cambian las reglas** - la primera ficha de la partida no puede ir al centro, que
+    era una victoria forzada para quien empezaba. Ademas, limite de 60 fps, los botones del HUD
+    dejan de colarle el clic al tablero y el historico se guarda de forma atomica.
 - Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
   carpeta "DontShip" -> `gh release create vX.Y.Z <zip> --notes-file <notas>`.
 
