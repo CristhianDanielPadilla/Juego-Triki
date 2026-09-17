@@ -84,7 +84,7 @@
             <ui:Instance template="ColorStatsTable" name="history-local" />
 
             <!-- Borra solo el registro de la pestaña visible, tras confirmar. -->
-            <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline" />
+            <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline history-delete" />
             <ui:Button name="back-button" text="Volver" class="menu-button" />
         </ui:VisualElement>
 

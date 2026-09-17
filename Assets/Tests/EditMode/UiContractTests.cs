@@ -57,6 +57,8 @@ namespace Triki.Tests
             Assert.IsTrue(root.Q("history-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("setup-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("confirm-overlay").ClassListContains("hidden"), "El diálogo empieza cerrado.");
+            Assert.IsTrue(root.Q("delete-history-button").ClassListContains("history-delete"), "Borrar registro usa el estilo compacto.");
+            Assert.IsNull(root.Q("delete-all-history-button"), "Ya no existe el botón de borrar todo.");
         }
 
         [Test]
