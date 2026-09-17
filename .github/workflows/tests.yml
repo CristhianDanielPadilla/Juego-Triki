@@ -67,8 +67,9 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           checkName: Resultados EditMode
 
+      # También si los tests fallan, pero no si ni siquiera se ejecutaron (no habría ruta).
       - name: Subir resultados
-        if: always()
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         uses: actions/upload-artifact@v7
         with:
           name: test-results
