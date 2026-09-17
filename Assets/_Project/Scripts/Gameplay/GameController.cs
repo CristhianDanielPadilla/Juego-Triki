@@ -28,7 +28,7 @@ namespace Triki.Gameplay
         private int _selectedCell = NoSelection;
         private float _aiCountdown = NoAiPending;
         private StatsRepository _statsRepository;
-        private MatchStats _stats;
+        private MatchHistory _history;
 
         /// <summary>Partida en curso; la UI se suscribe a sus eventos. Disponible desde <c>Start</c>.</summary>
         public TrikiGame Game => _game;
@@ -51,7 +51,7 @@ namespace Triki.Gameplay
             }
 
             _statsRepository = new StatsRepository();
-            _stats = _statsRepository.Load();
+            _history = _statsRepository.Load();
 
             _settings = MatchSettingsStore.Load();
             if (_settings.VsAi)
@@ -198,17 +198,22 @@ namespace Triki.Gameplay
 
         private void HandleTurnChanged(Player player) => ScheduleAiIfNeeded();
 
+        /// <param name="winner"><see cref="Player.None"/> si fue empate.</param>
+        private void SaveResult(Player winner)
+        {
+            HistoryRecorder.Record(_history, _settings, winner);
+            _statsRepository.Save(_history);
+        }
+
         private void HandleGameDrawn(DrawReason reason)
         {
-            _stats.RecordDraw();
-            _statsRepository.Save(_stats);
+            SaveResult(Player.None);
             ClearSelection();
         }
 
         private void HandleGameWon(Player winner, WinReason reason)
         {
-            _stats.RecordWin(winner);
-            _statsRepository.Save(_stats);
+            SaveResult(winner);
 
             ClearSelection();
             if (reason == WinReason.Line)

@@ -18,10 +18,29 @@ namespace Triki.Tests
         [TestCase("mode-ai"), TestCase("mode-local")]
         [TestCase("difficulty-easy"), TestCase("difficulty-normal"), TestCase("difficulty-hard")]
         [TestCase("color-one"), TestCase("color-two")]
-        [TestCase("games-played"), TestCase("draws")]
-        [TestCase("player-one-name"), TestCase("player-one-wins"), TestCase("player-one-losses")]
-        [TestCase("player-two-name"), TestCase("player-two-wins"), TestCase("player-two-losses")]
+        [TestCase("tab-ai"), TestCase("tab-local"), TestCase("tab-legacy")]
+        [TestCase("history-ai"), TestCase("history-local"), TestCase("history-legacy"), TestCase("legacy-stats")]
+        [TestCase("ai-games"), TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);
+
+        // HistoryView busca estos nombres dentro de cada fila de dificultad.
+        [TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
+        public void AiRow_HasResultLabels(string row)
+        {
+            var element = Clone("MainMenu.uxml").Q(row);
+            foreach (var name in new[] { "wins", "losses", "draws" })
+                Assert.IsNotNull(element.Q<Label>(name), $"{row} no tiene '{name}'.");
+        }
+
+        // Y estos dentro de cada instancia de ColorStatsTable.uxml.
+        [TestCase("history-local"), TestCase("legacy-stats")]
+        public void ColorTable_HasStatLabels(string table)
+        {
+            var element = Clone("MainMenu.uxml").Q(table);
+            foreach (var name in new[] { "games", "draws", "player-one-name", "player-one-wins", "player-one-losses",
+                         "player-two-name", "player-two-wins", "player-two-losses" })
+                Assert.IsNotNull(element.Q<Label>(name), $"{table} no tiene '{name}'.");
+        }
 
         [TestCase("status-label"), TestCase("restart-button"), TestCase("menu-button")]
         public void GameHud_HasElement(string elementName) => AssertHasElement("GameHud.uxml", elementName);

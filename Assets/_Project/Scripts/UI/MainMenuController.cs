@@ -36,15 +36,7 @@ namespace Triki.UI
         private Button _colorOne;
         private Button _colorTwo;
 
-        private Label _gamesPlayed;
-        private Label _draws;
-        private Label _playerOneName;
-        private Label _playerOneWins;
-        private Label _playerOneLosses;
-        private Label _playerTwoName;
-        private Label _playerTwoWins;
-        private Label _playerTwoLosses;
-
+        private HistoryView _historyView;
         private MatchSettings _settings;
 
         private void OnEnable()
@@ -77,17 +69,8 @@ namespace Triki.UI
             _colorOne = root.Q<Button>("color-one");
             _colorTwo = root.Q<Button>("color-two");
 
-            _gamesPlayed = root.Q<Label>("games-played");
-            _draws = root.Q<Label>("draws");
-            _playerOneName = root.Q<Label>("player-one-name");
-            _playerOneWins = root.Q<Label>("player-one-wins");
-            _playerOneLosses = root.Q<Label>("player-one-losses");
-            _playerTwoName = root.Q<Label>("player-two-name");
-            _playerTwoWins = root.Q<Label>("player-two-wins");
-            _playerTwoLosses = root.Q<Label>("player-two-losses");
-
-            _playerOneName.text = PlayerLabels.GetName(Player.One);
-            _playerTwoName.text = PlayerLabels.GetName(Player.Two);
+            _historyView = new HistoryView(_historyPanel);
+            _historyView.Bind();
 
             _playButton.clicked += ShowSetup;
             _historyButton.clicked += ShowHistory;
@@ -130,6 +113,7 @@ namespace Triki.UI
             _difficultyHard.UnregisterCallback<ClickEvent, AiDifficulty>(HandleDifficultyClicked);
             _colorOne.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
             _colorTwo.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
+            _historyView.Unbind();
         }
 
         private void ShowMain()
@@ -149,16 +133,9 @@ namespace Triki.UI
         private void ShowHistory()
         {
             // Se lee al abrir: así siempre refleja las partidas jugadas desde el último vistazo.
-            var stats = new StatsRepository().Load();
-            _gamesPlayed.text = stats.GamesPlayed.ToString();
-            _draws.text = stats.Draws.ToString();
-            _playerOneWins.text = stats.GetWins(Player.One).ToString();
-            _playerOneLosses.text = stats.GetLosses(Player.One).ToString();
-            _playerTwoWins.text = stats.GetWins(Player.Two).ToString();
-            _playerTwoLosses.text = stats.GetLosses(Player.Two).ToString();
-
+            _historyView.Show(new StatsRepository().Load());
             ShowOnly(_historyPanel);
-            _historyBackButton.Focus();
+            _historyView.DefaultFocus.Focus();
         }
 
         private void ToggleSound()

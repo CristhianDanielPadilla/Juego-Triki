@@ -10,6 +10,10 @@ namespace Triki.Tests
 {
     public class StatsRepositoryTests
     {
+        // Archivo tal como lo guardaba v0.1.x (formato 1, sin modo de juego).
+        private const string V1File =
+            "{\"version\":1,\"gamesPlayed\":6,\"draws\":1,\"playerOneWins\":3,\"playerOneLosses\":2,\"playerTwoWins\":2,\"playerTwoLosses\":3}";
+
         private string _directory;
         private StatsRepository _repository;
 
@@ -28,60 +32,108 @@ namespace Triki.Tests
         }
 
         [Test]
-        public void Load_WithoutFile_ReturnsEmptyStats()
+        public void Load_WithoutFile_ReturnsEmptyHistory()
         {
-            var stats = _repository.Load();
+            var history = _repository.Load();
 
-            Assert.AreEqual(0, stats.GamesPlayed);
+            Assert.AreEqual(0, history.GamesPlayed);
+            Assert.IsFalse(history.HasLegacy);
         }
 
         [Test]
-        public void SaveThenLoad_RoundTrips_AndCreatesDirectory()
+        public void SaveThenLoad_RoundTripsEverySection_AndCreatesDirectory()
         {
-            var stats = new MatchStats();
-            stats.RecordWin(Player.One);
-            stats.RecordWin(Player.Two);
-            stats.RecordWin(Player.Two);
-            stats.RecordDraw();
+            var history = new MatchHistory();
+            history.TwoPlayer.RecordWin(Player.One);
+            history.TwoPlayer.RecordWin(Player.Two);
+            history.TwoPlayer.RecordDraw();
+            history.VsAi.RecordWin(AiDifficulty.Easy);
+            history.VsAi.RecordLoss(AiDifficulty.Hard);
+            history.VsAi.RecordLoss(AiDifficulty.Hard);
+            history.VsAi.RecordDraw(AiDifficulty.Normal);
+            history.Legacy.Restore(5, 1, 2, 2, 2, 2);
 
-            _repository.Save(stats);
+            _repository.Save(history);
             var loaded = _repository.Load();
 
             Assert.IsTrue(File.Exists(_repository.FilePath));
             Assert.IsFalse(File.Exists(_repository.FilePath + ".tmp"));
-            Assert.AreEqual(4, loaded.GamesPlayed);
-            Assert.AreEqual(1, loaded.Draws);
-            Assert.AreEqual(1, loaded.GetWins(Player.One));
-            Assert.AreEqual(2, loaded.GetLosses(Player.One));
-            Assert.AreEqual(2, loaded.GetWins(Player.Two));
-            Assert.AreEqual(1, loaded.GetLosses(Player.Two));
+
+            Assert.AreEqual(3, loaded.TwoPlayer.GamesPlayed);
+            Assert.AreEqual(1, loaded.TwoPlayer.Draws);
+            Assert.AreEqual(1, loaded.TwoPlayer.GetWins(Player.One));
+            Assert.AreEqual(1, loaded.TwoPlayer.GetLosses(Player.One));
+
+            Assert.AreEqual(4, loaded.VsAi.GamesPlayed);
+            Assert.AreEqual(1, loaded.VsAi.GetWins(AiDifficulty.Easy));
+            Assert.AreEqual(1, loaded.VsAi.GetDraws(AiDifficulty.Normal));
+            Assert.AreEqual(2, loaded.VsAi.GetLosses(AiDifficulty.Hard));
+
+            Assert.AreEqual(5, loaded.Legacy.GamesPlayed);
+            Assert.AreEqual(12, loaded.GamesPlayed);
+        }
+
+        [Test]
+        public void Save_WritesFormatVersion2()
+        {
+            _repository.Save(new MatchHistory());
+
+            StringAssert.Contains("\"version\": 2", File.ReadAllText(_repository.FilePath));
         }
 
         [Test]
         public void Save_OverwritesPreviousFile()
         {
-            var stats = new MatchStats();
-            stats.RecordWin(Player.One);
-            _repository.Save(stats);
+            var history = new MatchHistory();
+            history.VsAi.RecordWin(AiDifficulty.Normal);
+            _repository.Save(history);
 
-            stats.RecordWin(Player.One);
-            _repository.Save(stats);
+            history.VsAi.RecordWin(AiDifficulty.Normal);
+            _repository.Save(history);
 
-            Assert.AreEqual(2, _repository.Load().GamesPlayed);
+            Assert.AreEqual(2, _repository.Load().VsAi.GetWins(AiDifficulty.Normal));
         }
 
         [Test]
-        public void Load_FileFromBeforeDraws_LoadsWithZeroDraws()
+        public void Load_V1File_GoesToLegacySection()
         {
-            Directory.CreateDirectory(_directory);
-            File.WriteAllText(_repository.FilePath,
+            WriteFile(_repository.FilePath, V1File);
+
+            var history = _repository.Load();
+
+            Assert.IsTrue(history.HasLegacy);
+            Assert.AreEqual(6, history.Legacy.GamesPlayed);
+            Assert.AreEqual(1, history.Legacy.Draws);
+            Assert.AreEqual(3, history.Legacy.GetWins(Player.One));
+            Assert.AreEqual(3, history.Legacy.GetLosses(Player.Two));
+            Assert.AreEqual(0, history.TwoPlayer.GamesPlayed);
+            Assert.AreEqual(0, history.VsAi.GamesPlayed);
+        }
+
+        [Test]
+        public void Load_V1FileBeforeDraws_LoadsWithZeroDraws()
+        {
+            WriteFile(_repository.FilePath,
                 "{\"version\":1,\"gamesPlayed\":2,\"playerOneWins\":2,\"playerOneLosses\":0,\"playerTwoWins\":0,\"playerTwoLosses\":2}");
 
-            var stats = _repository.Load();
+            var history = _repository.Load();
 
-            Assert.AreEqual(2, stats.GamesPlayed);
-            Assert.AreEqual(0, stats.Draws);
-            Assert.AreEqual(2, stats.GetWins(Player.One));
+            Assert.AreEqual(2, history.Legacy.GamesPlayed);
+            Assert.AreEqual(0, history.Legacy.Draws);
+        }
+
+        [Test]
+        public void LegacySection_SurvivesNewGames()
+        {
+            WriteFile(_repository.FilePath, V1File);
+            var history = _repository.Load();
+            history.VsAi.RecordWin(AiDifficulty.Easy);
+
+            _repository.Save(history);
+            var reloaded = _repository.Load();
+
+            Assert.AreEqual(6, reloaded.Legacy.GamesPlayed);
+            Assert.AreEqual(1, reloaded.VsAi.GamesPlayed);
         }
 
         [Test]
@@ -108,36 +160,37 @@ namespace Triki.Tests
         }
 
         [Test]
-        public void Load_WithoutFile_CopiesLegacyFile_AndKeepsOriginal()
+        public void Load_WithoutFile_CopiesFileFromOldCompany_AndKeepsOriginal()
         {
-            var legacyPath = WriteLegacyStats(winsForOne: 4);
-            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), legacyPath);
+            var oldPath = Path.Combine(_directory, "viejo", StatsRepository.DefaultFileName);
+            WriteFile(oldPath, V1File);
+            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), oldPath);
 
-            var stats = repository.Load();
+            var history = repository.Load();
 
-            Assert.AreEqual(4, stats.GamesPlayed);
-            Assert.AreEqual(4, stats.GetWins(Player.One));
+            Assert.AreEqual(6, history.Legacy.GamesPlayed, "Un archivo de v0.1.x va a la sección Anteriores.");
             Assert.IsTrue(File.Exists(repository.FilePath), "Debe quedar la copia en la ruta nueva.");
-            Assert.IsTrue(File.Exists(legacyPath), "El original se conserva como respaldo.");
+            Assert.IsTrue(File.Exists(oldPath), "El original se conserva como respaldo.");
         }
 
         [Test]
-        public void Load_WithExistingFile_IgnoresLegacyFile()
+        public void Load_WithExistingFile_IgnoresOldCompanyFile()
         {
-            var legacyPath = WriteLegacyStats(winsForOne: 4);
-            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), legacyPath);
-            var current = new MatchStats();
-            current.RecordWin(Player.Two);
+            var oldPath = Path.Combine(_directory, "viejo", StatsRepository.DefaultFileName);
+            WriteFile(oldPath, V1File);
+            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), oldPath);
+            var current = new MatchHistory();
+            current.TwoPlayer.RecordWin(Player.Two);
             repository.Save(current);
 
-            var stats = repository.Load();
+            var history = repository.Load();
 
-            Assert.AreEqual(1, stats.GamesPlayed);
-            Assert.AreEqual(1, stats.GetWins(Player.Two));
+            Assert.AreEqual(1, history.GamesPlayed);
+            Assert.IsFalse(history.HasLegacy);
         }
 
         [Test]
-        public void Load_WithMissingLegacyFile_StartsEmpty()
+        public void Load_WithMissingOldCompanyFile_StartsEmpty()
         {
             var repository = new StatsRepository(
                 Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName),
@@ -147,27 +200,23 @@ namespace Triki.Tests
             Assert.IsFalse(File.Exists(repository.FilePath));
         }
 
-        private string WriteLegacyStats(int winsForOne)
-        {
-            var legacy = new StatsRepository(Path.Combine(_directory, "viejo", StatsRepository.DefaultFileName));
-            var stats = new MatchStats();
-            for (var i = 0; i < winsForOne; i++)
-                stats.RecordWin(Player.One);
-            legacy.Save(stats);
-            return legacy.FilePath;
-        }
-
         [TestCase("esto no es json", TestName = "JSON inválido")]
-        [TestCase("{\"gamesPlayed\": -3}", TestName = "Valores negativos")]
-        public void Load_CorruptFile_WarnsAndReturnsEmptyStats(string content)
+        [TestCase("{\"gamesPlayed\": -3}", TestName = "Valores negativos (v1)")]
+        [TestCase("{\"version\": 2, \"vsAi\": {\"hard\": {\"wins\": -1}}}", TestName = "Valores negativos (v2)")]
+        public void Load_CorruptFile_WarnsAndReturnsEmptyHistory(string content)
         {
-            Directory.CreateDirectory(_directory);
-            File.WriteAllText(_repository.FilePath, content);
+            WriteFile(_repository.FilePath, content);
             LogAssert.Expect(LogType.Warning, new Regex("No se pudo leer el histórico"));
 
-            var stats = _repository.Load();
+            var history = _repository.Load();
 
-            Assert.AreEqual(0, stats.GamesPlayed);
+            Assert.AreEqual(0, history.GamesPlayed);
+        }
+
+        private static void WriteFile(string path, string content)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, content);
         }
     }
 }

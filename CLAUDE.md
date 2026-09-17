@@ -34,7 +34,16 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   La matematica esta en funciones puras (`CameraFit`, `SafeAreaInsets`) con tests.
 - `SceneWiringTests` abre las escenas en preview y falla si falta un script o una referencia.
   Si se edita una escena a mano (YAML), correr los tests antes de commitear.
-- El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`).
+- Historico (`MatchHistory`, Core) separado por modo:
+  - `VsAi` (`AiMatchStats`): victorias/derrotas/empates del humano por dificultad.
+  - `TwoPlayer` (`MatchStats`): por color.
+  - `Legacy`: partidas de v0.1.x, que no guardaban el modo. Solo lectura; la pestaña "Anteriores"
+    solo aparece si hay alguna.
+  - `HistoryRecorder.Record` decide la seccion; `HistoryView` (UI) pinta las pestañas. La tabla por
+    color es la plantilla `UI/ColorStatsTable.uxml`, instanciada dos veces: buscar sus nombres
+    dentro de cada instancia, no en la raiz.
+- El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`),
+  formato `version: 2`. Un archivo sin version o con `version: 1` se lee a `Legacy`.
   En Windows: `%USERPROFILE%\AppData\LocalLow\CDCompany\Juego-Triki\`.
   - Compañia `CDCompany` e identificador `com.cdcompany.juegotriki` (Player Settings). v0.1.0 salio
     con `DefaultCompany`: si falta el historico, `StatsRepository` copia el de
