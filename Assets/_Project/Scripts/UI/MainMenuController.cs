@@ -1,3 +1,4 @@
+using System;
 using Triki.Core;
 using Triki.Gameplay;
 using UnityEngine;
@@ -36,15 +37,10 @@ namespace Triki.UI
         private Button _colorOne;
         private Button _colorTwo;
 
-        private Label _gamesPlayed;
-        private Label _draws;
-        private Label _playerOneName;
-        private Label _playerOneWins;
-        private Label _playerOneLosses;
-        private Label _playerTwoName;
-        private Label _playerTwoWins;
-        private Label _playerTwoLosses;
-
+        private HistoryView _historyView;
+        private ConfirmDialog _confirmDialog;
+        private Action _deleteConfirmed;
+        private HistorySection _pendingDelete;
         private MatchSettings _settings;
 
         private void OnEnable()
@@ -77,17 +73,13 @@ namespace Triki.UI
             _colorOne = root.Q<Button>("color-one");
             _colorTwo = root.Q<Button>("color-two");
 
-            _gamesPlayed = root.Q<Label>("games-played");
-            _draws = root.Q<Label>("draws");
-            _playerOneName = root.Q<Label>("player-one-name");
-            _playerOneWins = root.Q<Label>("player-one-wins");
-            _playerOneLosses = root.Q<Label>("player-one-losses");
-            _playerTwoName = root.Q<Label>("player-two-name");
-            _playerTwoWins = root.Q<Label>("player-two-wins");
-            _playerTwoLosses = root.Q<Label>("player-two-losses");
+            _historyView = new HistoryView(_historyPanel);
+            _historyView.Bind();
+            _historyView.DeleteRequested += HandleDeleteRequested;
 
-            _playerOneName.text = PlayerLabels.GetName(Player.One);
-            _playerTwoName.text = PlayerLabels.GetName(Player.Two);
+            _confirmDialog = new ConfirmDialog(root.Q("confirm-overlay"));
+            _confirmDialog.Bind();
+            _deleteConfirmed = DeletePendingSection;
 
             _playButton.clicked += ShowSetup;
             _historyButton.clicked += ShowHistory;
@@ -130,6 +122,9 @@ namespace Triki.UI
             _difficultyHard.UnregisterCallback<ClickEvent, AiDifficulty>(HandleDifficultyClicked);
             _colorOne.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
             _colorTwo.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
+            _historyView.DeleteRequested -= HandleDeleteRequested;
+            _historyView.Unbind();
+            _confirmDialog.Unbind();
         }
 
         private void ShowMain()
@@ -149,16 +144,32 @@ namespace Triki.UI
         private void ShowHistory()
         {
             // Se lee al abrir: así siempre refleja las partidas jugadas desde el último vistazo.
-            var stats = new StatsRepository().Load();
-            _gamesPlayed.text = stats.GamesPlayed.ToString();
-            _draws.text = stats.Draws.ToString();
-            _playerOneWins.text = stats.GetWins(Player.One).ToString();
-            _playerOneLosses.text = stats.GetLosses(Player.One).ToString();
-            _playerTwoWins.text = stats.GetWins(Player.Two).ToString();
-            _playerTwoLosses.text = stats.GetLosses(Player.Two).ToString();
-
+            _historyView.Show(new StatsRepository().Load());
             ShowOnly(_historyPanel);
-            _historyBackButton.Focus();
+            _historyView.DefaultFocus.Focus();
+        }
+
+        private void HandleDeleteRequested(HistorySection section)
+        {
+            var history = new StatsRepository().Load();
+            _pendingDelete = section;
+            _confirmDialog.Show(
+                $"¿Eliminar el registro {HistoryView.GetSectionName(section)}?",
+                HistoryView.GetDeleteMessage(section, history.GetGamesPlayed(section)),
+                "Eliminar",
+                _deleteConfirmed);
+        }
+
+        private void DeletePendingSection()
+        {
+            // Se relee del disco para no pisar partidas guardadas desde que se abrió el panel.
+            var repository = new StatsRepository();
+            var history = repository.Load();
+            history.Clear(_pendingDelete);
+            repository.Save(history);
+
+            _historyView.Show(history);
+            _historyView.DefaultFocus.Focus();
         }
 
         private void ToggleSound()

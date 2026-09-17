@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Triki.Gameplay
 {
     /// <summary>
-    /// Guarda el histórico como JSON en <see cref="Application.persistentDataPath"/>.
+    /// Guarda el histórico (<see cref="MatchHistory"/>) como JSON en <see cref="Application.persistentDataPath"/>.
     /// Si el archivo falta o está dañado se empieza de cero en vez de romper el juego.
     /// Si falta pero existe el de una compañía anterior (<see cref="LegacyCompanyName"/>), lo copia primero.
     /// </summary>
@@ -16,6 +16,9 @@ namespace Triki.Gameplay
 
         /// <summary>Compañía con la que se publicó v0.1.0; su carpeta de datos era otra.</summary>
         public const string LegacyCompanyName = "DefaultCompany";
+
+        /// <summary>Formato del archivo: 1 = v0.1.x (sin modo de juego), 2 = separado por modo.</summary>
+        private const int CurrentVersion = 2;
 
         public StatsRepository()
             : this(
@@ -56,28 +59,41 @@ namespace Triki.Gameplay
             return Path.Combine(companyDirectory.Parent.FullName, legacyCompanyName, productDirectory.Name, DefaultFileName);
         }
 
-        public MatchStats Load()
+        public MatchHistory Load()
         {
-            var stats = new MatchStats();
+            var history = new MatchHistory();
             if (!File.Exists(FilePath))
                 MigrateLegacyFile();
             if (!File.Exists(FilePath))
-                return stats;
+                return history;
 
             try
             {
-                var data = JsonUtility.FromJson<StatsData>(File.ReadAllText(FilePath));
+                var data = JsonUtility.FromJson<HistoryData>(File.ReadAllText(FilePath));
                 if (data == null)
                     throw new FormatException("Archivo vacío.");
-                stats.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
+
+                if (data.version < CurrentVersion)
+                {
+                    // v1 (v0.1.x): campos planos sin modo de juego -> solo al registro general.
+                    history.Overall.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
+                }
+                else
+                {
+                    Restore(history.TwoPlayer, data.twoPlayer);
+                    Restore(history.Overall, data.overall);
+                    Restore(history.VsAi, AiDifficulty.Easy, data.vsAi?.easy);
+                    Restore(history.VsAi, AiDifficulty.Normal, data.vsAi?.normal);
+                    Restore(history.VsAi, AiDifficulty.Hard, data.vsAi?.hard);
+                }
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is FormatException)
             {
                 Debug.LogWarning($"No se pudo leer el histórico en '{FilePath}'; se empieza de cero. {e.Message}");
-                stats.Clear();
+                history.ClearAll();
             }
 
-            return stats;
+            return history;
         }
 
         /// <summary>Copia (no mueve) el histórico anterior: el original queda como respaldo.</summary>
@@ -100,19 +116,22 @@ namespace Triki.Gameplay
             }
         }
 
-        public void Save(MatchStats stats)
+        public void Save(MatchHistory history)
         {
-            if (stats == null)
-                throw new ArgumentNullException(nameof(stats));
+            if (history == null)
+                throw new ArgumentNullException(nameof(history));
 
-            var data = new StatsData
+            var data = new HistoryData
             {
-                gamesPlayed = stats.GamesPlayed,
-                draws = stats.Draws,
-                playerOneWins = stats.GetWins(Player.One),
-                playerOneLosses = stats.GetLosses(Player.One),
-                playerTwoWins = stats.GetWins(Player.Two),
-                playerTwoLosses = stats.GetLosses(Player.Two),
+                version = CurrentVersion,
+                twoPlayer = ToData(history.TwoPlayer),
+                overall = ToData(history.Overall),
+                vsAi = new AiStatsData
+                {
+                    easy = ToData(history.VsAi, AiDifficulty.Easy),
+                    normal = ToData(history.VsAi, AiDifficulty.Normal),
+                    hard = ToData(history.VsAi, AiDifficulty.Hard),
+                },
             };
 
             try
@@ -135,19 +154,85 @@ namespace Triki.Gameplay
             }
         }
 
-        [Serializable]
-        internal sealed class StatsData
+        private static void Restore(MatchStats stats, ColorStatsData data)
         {
-            // Para migrar el formato si algún día cambia.
-            public int version = 1;
-            public int gamesPlayed;
+            if (data != null)
+                stats.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
+        }
 
-            // Añadido después de la versión 1: los archivos anteriores no lo tienen y cargan 0.
+        private static void Restore(AiMatchStats stats, AiDifficulty difficulty, ResultData data)
+        {
+            if (data != null)
+                stats.Restore(difficulty, data.wins, data.losses, data.draws);
+        }
+
+        private static ColorStatsData ToData(MatchStats stats)
+        {
+            return new ColorStatsData
+            {
+                gamesPlayed = stats.GamesPlayed,
+                draws = stats.Draws,
+                playerOneWins = stats.GetWins(Player.One),
+                playerOneLosses = stats.GetLosses(Player.One),
+                playerTwoWins = stats.GetWins(Player.Two),
+                playerTwoLosses = stats.GetLosses(Player.Two),
+            };
+        }
+
+        private static ResultData ToData(AiMatchStats stats, AiDifficulty difficulty)
+        {
+            return new ResultData
+            {
+                wins = stats.GetWins(difficulty),
+                losses = stats.GetLosses(difficulty),
+                draws = stats.GetDraws(difficulty),
+            };
+        }
+
+        // Formato del archivo. v1 (v0.1.x) solo tenía los campos planos de abajo; v2 separa por modo.
+        // Un archivo sin "version" se trata como v1.
+        [Serializable]
+        internal sealed class HistoryData
+        {
+            public int version;
+            public ColorStatsData twoPlayer;
+            public AiStatsData vsAi;
+            public ColorStatsData overall;
+
+            // Solo v1 (lectura).
+            public int gamesPlayed;
             public int draws;
             public int playerOneWins;
             public int playerOneLosses;
             public int playerTwoWins;
             public int playerTwoLosses;
+        }
+
+        [Serializable]
+        internal sealed class ColorStatsData
+        {
+            public int gamesPlayed;
+            public int draws;
+            public int playerOneWins;
+            public int playerOneLosses;
+            public int playerTwoWins;
+            public int playerTwoLosses;
+        }
+
+        [Serializable]
+        internal sealed class AiStatsData
+        {
+            public ResultData easy;
+            public ResultData normal;
+            public ResultData hard;
+        }
+
+        [Serializable]
+        internal sealed class ResultData
+        {
+            public int wins;
+            public int losses;
+            public int draws;
         }
     }
 }

@@ -1,4 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Template name="ColorStatsTable" src="ColorStatsTable.uxml" />
     <Style src="Triki.uss" />
     <ui:VisualElement name="menu-screen" class="screen">
         <ui:VisualElement name="main-panel" class="panel">
@@ -36,32 +37,67 @@
 
         <ui:VisualElement name="history-panel" class="panel hidden">
             <ui:Label text="Histórico de partidas" class="panel-title" />
-            <ui:VisualElement class="stat-total">
-                <ui:Label text="Partidas jugadas" class="stat-total__name" />
-                <ui:Label name="games-played" text="0" class="stat-total__value" />
+            <ui:VisualElement class="segmented history-tabs">
+                <ui:Button name="tab-general" text="General" class="segment" />
+                <ui:Button name="tab-ai" text="Contra la IA" class="segment" />
+                <ui:Button name="tab-local" text="Dos jugadores" class="segment" />
             </ui:VisualElement>
-            <ui:VisualElement class="stat-total">
-                <ui:Label text="Empates" class="stat-total__name" />
-                <ui:Label name="draws" text="0" class="stat-total__value" />
+
+            <!-- General: todas las partidas, sin importar el modo. -->
+            <ui:Instance template="ColorStatsTable" name="history-general" />
+
+            <!-- Contra la IA: tus resultados por dificultad. -->
+            <ui:VisualElement name="history-ai">
+                <ui:VisualElement class="stat-total">
+                    <ui:Label text="Partidas jugadas" class="stat-total__name" />
+                    <ui:Label name="ai-games" text="0" class="stat-total__value" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stats-table">
+                    <ui:VisualElement class="stats-table__row stats-table__header">
+                        <ui:Label text="Dificultad" class="cell cell--name" />
+                        <ui:Label text="Victorias" class="cell" />
+                        <ui:Label text="Derrotas" class="cell" />
+                        <ui:Label text="Empates" class="cell" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="ai-easy" class="stats-table__row">
+                        <ui:Label text="Fácil" class="cell cell--name" />
+                        <ui:Label name="wins" text="0" class="cell" />
+                        <ui:Label name="losses" text="0" class="cell" />
+                        <ui:Label name="draws" text="0" class="cell" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="ai-normal" class="stats-table__row">
+                        <ui:Label text="Normal" class="cell cell--name" />
+                        <ui:Label name="wins" text="0" class="cell" />
+                        <ui:Label name="losses" text="0" class="cell" />
+                        <ui:Label name="draws" text="0" class="cell" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="ai-hard" class="stats-table__row">
+                        <ui:Label text="Difícil" class="cell cell--name" />
+                        <ui:Label name="wins" text="0" class="cell" />
+                        <ui:Label name="losses" text="0" class="cell" />
+                        <ui:Label name="draws" text="0" class="cell" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
             </ui:VisualElement>
-            <ui:VisualElement class="stats-table">
-                <ui:VisualElement class="stats-table__row stats-table__header">
-                    <ui:Label text="Color" class="cell cell--name" />
-                    <ui:Label text="Victorias" class="cell" />
-                    <ui:Label text="Derrotas" class="cell" />
-                </ui:VisualElement>
-                <ui:VisualElement class="stats-table__row">
-                    <ui:Label name="player-one-name" text="Rojo" class="cell cell--name player-one" />
-                    <ui:Label name="player-one-wins" text="0" class="cell" />
-                    <ui:Label name="player-one-losses" text="0" class="cell" />
-                </ui:VisualElement>
-                <ui:VisualElement class="stats-table__row">
-                    <ui:Label name="player-two-name" text="Azul" class="cell cell--name player-two" />
-                    <ui:Label name="player-two-wins" text="0" class="cell" />
-                    <ui:Label name="player-two-losses" text="0" class="cell" />
-                </ui:VisualElement>
-            </ui:VisualElement>
+
+            <!-- Dos jugadores: por color. -->
+            <ui:Instance template="ColorStatsTable" name="history-local" />
+
+            <!-- Borra solo el registro de la pestaña visible, tras confirmar. -->
+            <ui:Button name="delete-history-button" text="Eliminar registro" class="menu-button menu-button--danger-outline" />
             <ui:Button name="back-button" text="Volver" class="menu-button" />
+        </ui:VisualElement>
+
+        <!-- Confirmación modal. Cubre toda la pantalla para que no se pueda tocar lo de detrás. -->
+        <ui:VisualElement name="confirm-overlay" class="overlay hidden">
+            <ui:VisualElement name="confirm-dialog" class="panel dialog">
+                <ui:Label name="confirm-title" text="¿Eliminar registro?" class="panel-title" />
+                <ui:Label name="confirm-message" text="" class="dialog__message" />
+                <ui:VisualElement class="dialog__actions">
+                    <ui:Button name="confirm-cancel" text="Cancelar" class="menu-button dialog__button" />
+                    <ui:Button name="confirm-accept" text="Eliminar" class="menu-button menu-button--danger dialog__button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
