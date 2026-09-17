@@ -24,6 +24,12 @@ jobs:
     runs-on: [self-hosted, Windows, unity]
     timeout-minutes: 30
 
+    # La política de ejecución de la PC bloquea los .ps1 que genera el runner. -ExecutionPolicy
+    # Bypass solo afecta a este proceso; no cambia la política del sistema.
+    defaults:
+      run:
+        shell: powershell -NoProfile -ExecutionPolicy Bypass -File {0}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -33,11 +39,12 @@ jobs:
           clean: false
 
       - name: Limpiar el workspace salvo Library
-        shell: powershell
-        run: git clean -ffdx -e /Library/
+        # Con un shell personalizado el runner no propaga solo el código de salida del último comando.
+        run: |
+          git clean -ffdx -e /Library/
+          exit $LASTEXITCODE
 
       - name: Tests EditMode
-        shell: powershell
         env:
           UNITY_EDITORS_DIR: C:\Program Files\Unity\Hub\Editor
         run: |
