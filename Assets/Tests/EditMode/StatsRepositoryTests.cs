@@ -84,6 +84,79 @@ namespace Triki.Tests
             Assert.AreEqual(2, stats.GetWins(Player.One));
         }
 
+        [Test]
+        public void GetLegacyFilePath_SwapsCompanyFolder()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "LocalLow");
+            var current = Path.Combine(root, "CDCompany", "Juego-Triki");
+
+            var legacy = StatsRepository.GetLegacyFilePath(current, "CDCompany", "DefaultCompany");
+
+            Assert.AreEqual(
+                Path.Combine(Path.GetFullPath(root), "DefaultCompany", "Juego-Triki", StatsRepository.DefaultFileName),
+                legacy);
+        }
+
+        [TestCase("DefaultCompany", "DefaultCompany", TestName = "Misma compañía")]
+        [TestCase("OtraCompania", "DefaultCompany", TestName = "La ruta no termina en la compañía")]
+        public void GetLegacyFilePath_NotApplicable_ReturnsNull(string companyName, string legacyName)
+        {
+            var current = Path.Combine(Path.GetTempPath(), "LocalLow", "CDCompany", "Juego-Triki");
+
+            Assert.IsNull(StatsRepository.GetLegacyFilePath(current, companyName, legacyName));
+            Assert.IsNull(StatsRepository.GetLegacyFilePath(null, "CDCompany", "DefaultCompany"));
+        }
+
+        [Test]
+        public void Load_WithoutFile_CopiesLegacyFile_AndKeepsOriginal()
+        {
+            var legacyPath = WriteLegacyStats(winsForOne: 4);
+            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), legacyPath);
+
+            var stats = repository.Load();
+
+            Assert.AreEqual(4, stats.GamesPlayed);
+            Assert.AreEqual(4, stats.GetWins(Player.One));
+            Assert.IsTrue(File.Exists(repository.FilePath), "Debe quedar la copia en la ruta nueva.");
+            Assert.IsTrue(File.Exists(legacyPath), "El original se conserva como respaldo.");
+        }
+
+        [Test]
+        public void Load_WithExistingFile_IgnoresLegacyFile()
+        {
+            var legacyPath = WriteLegacyStats(winsForOne: 4);
+            var repository = new StatsRepository(Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName), legacyPath);
+            var current = new MatchStats();
+            current.RecordWin(Player.Two);
+            repository.Save(current);
+
+            var stats = repository.Load();
+
+            Assert.AreEqual(1, stats.GamesPlayed);
+            Assert.AreEqual(1, stats.GetWins(Player.Two));
+        }
+
+        [Test]
+        public void Load_WithMissingLegacyFile_StartsEmpty()
+        {
+            var repository = new StatsRepository(
+                Path.Combine(_directory, "nuevo", StatsRepository.DefaultFileName),
+                Path.Combine(_directory, "no-existe", StatsRepository.DefaultFileName));
+
+            Assert.AreEqual(0, repository.Load().GamesPlayed);
+            Assert.IsFalse(File.Exists(repository.FilePath));
+        }
+
+        private string WriteLegacyStats(int winsForOne)
+        {
+            var legacy = new StatsRepository(Path.Combine(_directory, "viejo", StatsRepository.DefaultFileName));
+            var stats = new MatchStats();
+            for (var i = 0; i < winsForOne; i++)
+                stats.RecordWin(Player.One);
+            legacy.Save(stats);
+            return legacy.FilePath;
+        }
+
         [TestCase("esto no es json", TestName = "JSON inválido")]
         [TestCase("{\"gamesPlayed\": -3}", TestName = "Valores negativos")]
         public void Load_CorruptFile_WarnsAndReturnsEmptyStats(string content)
