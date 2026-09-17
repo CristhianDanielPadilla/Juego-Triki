@@ -68,6 +68,7 @@ namespace Triki.Tests
             AssertSingleWired<GameController>("_boardView", "_camera");
             AssertSingleWired<GameHud>("_document", "_gameController");
             AssertSingleWired<SafeAreaPadding>("_document");
+            AssertSingleWired<AudioFeedback>("_gameController");
             var fitter = AssertSingleWired<CameraFitter>("_boardView");
             Assert.IsNotNull(fitter.GetComponent<Camera>(), "CameraFitter debe estar en la cámara.");
         }

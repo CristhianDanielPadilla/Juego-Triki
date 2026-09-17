@@ -82,7 +82,7 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Proximas ramas previstas: arte y audio.
+- Siguientes pasos sugeridos: CI con GameCI (tests en cada PR) y etiqueta `v0.1.0`.
 
 ## Reglas del juego (resumen)
 
@@ -90,6 +90,19 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   fase) o deja al rival sin movimientos.
 - Empate en la fase de movimiento: misma posicion (fichas + quien mueve) 3 veces, o 60
   movimientos sin ganador. Valores en `TrikiRules`; la victoria tiene prioridad sobre el empate.
+
+## Arte y audio
+
+- Todo el arte y el sonido actuales se generan por codigo (`SpriteFactory`, `ToneSynth`) y son
+  sustituibles: cada sprite/clip tiene un campo en el inspector (`BoardView`, `AudioFeedback`);
+  si se asigna, se usa ese asset y no se genera nada.
+  - Fichas: sprite en escala de grises (se tiñe con el color del jugador).
+  - Placa del tablero: se dibuja en modo Sliced, el sprite debe tener bordes 9-slice.
+  - Poner los assets en `Art/Sprites` y `Audio`.
+- Animaciones en `BoardView` (aparecer, deslizar, crecer) con arrays fijos; un tween por ficha y
+  `Update` no hace nada si no hay tweens. `CompleteAnimations()` las termina (tests/capturas).
+- Destruir objetos con `SpriteFactory.SafeDestroy` (Destroy en Play, DestroyImmediate en editor).
+- Sonido on/off en `AudioPreferences` (PlayerPrefs + `AudioListener.volume`).
 
 ## IA
 
