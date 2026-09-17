@@ -42,6 +42,7 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   - Cada partida se anota en `Overall` y en la de su modo (`HistoryRecorder.Record`).
   - Borrar (`MatchHistory.Clear(section)`) solo vacia ese registro; los demas no cambian, por eso
     General puede no coincidir con la suma de los otros tras borrar.
+  - "Borrar todo el historico" (`ClearAll`) vacia los tres; se desactiva si `IsEmpty`.
 - UI del historico: `HistoryView` pinta las pestañas y emite `DeleteRequested`; `MainMenuController`
   pide confirmacion con `ConfirmDialog` (modal, foco en Cancelar, Escape cancela) y borra releyendo
   del disco. La tabla por color es la plantilla `UI/ColorStatsTable.uxml`, instanciada dos veces:

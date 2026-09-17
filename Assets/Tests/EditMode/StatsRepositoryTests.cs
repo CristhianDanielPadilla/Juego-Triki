@@ -154,6 +154,21 @@ namespace Triki.Tests
         }
 
         [Test]
+        public void DeletingEverything_IsPersisted()
+        {
+            WriteFile(_repository.FilePath, V1File);
+            var history = _repository.Load();
+            HistoryRecorder.Record(history, new MatchSettings(true, AiDifficulty.Hard, Player.Two), Player.One);
+            _repository.Save(history);
+
+            var loaded = _repository.Load();
+            loaded.ClearAll();
+            _repository.Save(loaded);
+
+            Assert.IsTrue(_repository.Load().IsEmpty);
+        }
+
+        [Test]
         public void GetLegacyFilePath_SwapsCompanyFolder()
         {
             var root = Path.Combine(Path.GetTempPath(), "LocalLow");

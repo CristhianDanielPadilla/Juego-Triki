@@ -143,7 +143,6 @@
 }
 
 .menu-button--danger-outline {
-    margin-top: 20px;
     color: var(--color-player-one);
     background-color: rgba(0, 0, 0, 0);
     border-width: 2px;
@@ -162,6 +161,27 @@
 .menu-button--danger {
     background-color: rgb(200, 60, 55);
     -unity-font-style: bold;
+}
+
+.menu-button--danger:disabled {
+    opacity: 0.35;
+}
+
+/* Botones de borrado, uno junto al otro: textos largos pasan a dos líneas. */
+.history-actions {
+    flex-direction: row;
+    margin-top: 20px;
+}
+
+.history-action {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: auto;
+    min-height: 72px;
+    margin: 0 6px;
+    padding: 8px 12px;
+    font-size: 28px;
+    white-space: normal;
 }
 
 .menu-button--danger:hover,

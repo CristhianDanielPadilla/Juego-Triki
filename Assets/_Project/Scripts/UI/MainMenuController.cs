@@ -40,6 +40,7 @@ namespace Triki.UI
         private HistoryView _historyView;
         private ConfirmDialog _confirmDialog;
         private Action _deleteConfirmed;
+        private Action _deleteAllConfirmed;
         private HistorySection _pendingDelete;
         private MatchSettings _settings;
 
@@ -76,10 +77,12 @@ namespace Triki.UI
             _historyView = new HistoryView(_historyPanel);
             _historyView.Bind();
             _historyView.DeleteRequested += HandleDeleteRequested;
+            _historyView.DeleteAllRequested += HandleDeleteAllRequested;
 
             _confirmDialog = new ConfirmDialog(root.Q("confirm-overlay"));
             _confirmDialog.Bind();
             _deleteConfirmed = DeletePendingSection;
+            _deleteAllConfirmed = DeleteAllHistory;
 
             _playButton.clicked += ShowSetup;
             _historyButton.clicked += ShowHistory;
@@ -123,6 +126,7 @@ namespace Triki.UI
             _colorOne.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
             _colorTwo.UnregisterCallback<ClickEvent, Player>(HandleColorClicked);
             _historyView.DeleteRequested -= HandleDeleteRequested;
+            _historyView.DeleteAllRequested -= HandleDeleteAllRequested;
             _historyView.Unbind();
             _confirmDialog.Unbind();
         }
@@ -160,12 +164,28 @@ namespace Triki.UI
                 _deleteConfirmed);
         }
 
-        private void DeletePendingSection()
+        private void HandleDeleteAllRequested()
         {
-            // Se relee del disco para no pisar partidas guardadas desde que se abrió el panel.
+            var history = new StatsRepository().Load();
+            _confirmDialog.Show(
+                "¿Borrar todo el histórico?",
+                HistoryView.GetDeleteAllMessage(history),
+                "Borrar todo",
+                _deleteAllConfirmed);
+        }
+
+        private void DeletePendingSection() => DeleteFromDisk(history => history.Clear(_pendingDelete));
+
+        private void DeleteAllHistory() => DeleteFromDisk(history => history.ClearAll());
+
+        /// <summary>
+        /// Se relee del disco antes de borrar para no pisar partidas guardadas desde que se abrió el panel.
+        /// </summary>
+        private void DeleteFromDisk(Action<MatchHistory> delete)
+        {
             var repository = new StatsRepository();
             var history = repository.Load();
-            history.Clear(_pendingDelete);
+            delete(history);
             repository.Save(history);
 
             _historyView.Show(history);

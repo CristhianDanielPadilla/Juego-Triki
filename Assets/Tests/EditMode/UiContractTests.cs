@@ -21,7 +21,7 @@ namespace Triki.Tests
         [TestCase("tab-general"), TestCase("tab-ai"), TestCase("tab-local")]
         [TestCase("history-general"), TestCase("history-ai"), TestCase("history-local")]
         [TestCase("ai-games"), TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
-        [TestCase("delete-history-button")]
+        [TestCase("delete-history-button"), TestCase("delete-all-history-button")]
         [TestCase("confirm-overlay"), TestCase("confirm-title"), TestCase("confirm-message")]
         [TestCase("confirm-accept"), TestCase("confirm-cancel")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);
