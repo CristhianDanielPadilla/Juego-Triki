@@ -59,8 +59,17 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 ## Comandos
 
 - Tests EditMode desde el editor: Window > General > Test Runner.
-- Tests sin editor (Unity cerrado; PowerShell, usar `Start-Process -Wait` porque Unity.exe no bloquea):
-  `"C:\Program Files\Unity\Hub\Editor\6000.6.0f1\Editor\Unity.exe" -batchmode -nographics -projectPath <ruta> -runTests -testPlatform EditMode -testResults <xml> -logFile <log>`
+- Tests sin editor (Unity cerrado), el mismo script que usa la CI (deja los resultados en
+  `test-results/`, que no se commitea):
+  `powershell -ExecutionPolicy Bypass -File .github/scripts/run-editmode-tests.ps1`
+  - Por dentro: `Unity.exe -batchmode -nographics -projectPath <ruta> -runTests -testPlatform EditMode ...`
+    lanzado con `Start-Process -Wait` (Unity.exe es app de ventana y no bloquea).
+- Build de Windows (Unity cerrado):
+  `Unity.exe -batchmode -nographics -quit -projectPath <ruta> -buildTarget Win64 -buildWindows64Player <carpeta>\Juego-Triki.exe -logFile <log>`
+  - Compilar fuera de OneDrive y con ruta corta: hay archivos del build que pasan de 260 caracteres.
+  - No distribuir la carpeta `*_BackUpThisFolder_ButDontShipItWithYourGame`.
+  - Al compilar, Unity reescribe `PC_RPAsset` (filtrado de variantes de shader) y otros settings:
+    commitear esos cambios. Si activa `UnityConnectSettings` (`m_Enabled: 1`), revertirlo.
 - El proyecto NO se puede editar por fuera mientras el editor de Unity esta abierto:
   `ProjectSettings/*.asset` y las escenas los reescribe Unity al guardar/cerrar.
 
@@ -82,12 +91,25 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Escenas y prefabs se fusionan con UnityYAMLMerge (config local `merge.unityyamlmerge`, ruta
   ligada a la version del editor: actualizarla si cambia Unity).
 - Identidad git configurada en el repo (`user.name`/`user.email` con el correo noreply de GitHub).
-- Siguiente paso sugerido: etiqueta `v0.1.0`.
+
+## Versiones y releases
+
+- Versionado semantico con etiquetas anotadas en `main` (`vMAJOR.MINOR.PATCH`). La version del
+  juego esta en Player Settings (`bundleVersion` en `ProjectSettings.asset`) y debe coincidir con
+  la etiqueta: subirla en un PR antes de etiquetar.
+- `v0.1.0` (primera version jugable) etiquetada y publicada como release de GitHub con el build de
+  Windows x64 en zip.
+- Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
+  carpeta "DontShip" -> `gh release create vX.Y.Z <zip> --notes-file <notas>`.
 
 ## CI (GitHub Actions)
 
 - `.github/workflows/tests.yml`: tests EditMode en cada PR, en cada push a `main` y a mano
   (Actions > Tests > Run workflow). Resumen en la pagina de la ejecucion; XML y log como artefacto.
+- La logica esta en `.github/scripts/run-editmode-tests.ps1`, guardado en **UTF-8 con BOM**
+  (Windows PowerShell 5.1 lee como ANSI los scripts sin BOM y rompe las tildes; `.editorconfig`
+  lo exige para `*.ps1`). Los pasos corren con `powershell -ExecutionPolicy Bypass -File` porque la
+  politica de la PC bloquea scripts; con ese shell hay que terminar con `exit $LASTEXITCODE`.
 - Corre en un **runner self-hosted** (esta PC, etiquetas `self-hosted, Windows, unity`) usando el
   Unity instalado (`C:\Program Files\Unity\Hub\Editor\<version de ProjectVersion.txt>`).
   - Por que no GameCI en la nube: las licencias Personal de Unity 6 van ligadas a la maquina
@@ -98,9 +120,12 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   - No usar este runner si el repo pasa a ser publico: ejecutaria codigo de PRs ajenos.
 - Registrar el runner (una vez): Settings > Actions > Runners > New self-hosted runner > Windows,
   seguir los comandos que da GitHub en `C:\actions-runner`, y en `config.cmd` añadir la etiqueta
-  `unity`. Ejecutarlo con `run.cmd` o como servicio con la cuenta del usuario (la licencia de Unity
-  es por usuario; con la cuenta por defecto del servicio Unity no estaria activado).
-- Los secretos `UNITY_*` de la version con GameCI ya no se usan y se pueden borrar.
+  `unity` como *etiqueta adicional* (no como nombre). Si falta, se añade con
+  `gh api -X POST repos/<owner>/<repo>/actions/runners/<id>/labels -f 'labels[]=unity'`; los jobs
+  que ya estaban en cola hay que cancelarlos y relanzarlos. Ejecutarlo con `run.cmd` o como
+  servicio con la cuenta del usuario (la licencia de Unity es por usuario; con la cuenta por
+  defecto del servicio Unity no estaria activado).
+- El repo no tiene secretos: el runner usa la licencia de Unity de la PC.
 
 ## Reglas del juego (resumen)
 
