@@ -21,7 +21,7 @@ namespace Triki.Tests
         [TestCase("tab-general"), TestCase("tab-ai"), TestCase("tab-local")]
         [TestCase("history-general"), TestCase("history-ai"), TestCase("history-local")]
         [TestCase("ai-games"), TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
-        [TestCase("delete-history-button"), TestCase("delete-all-history-button")]
+        [TestCase("delete-history-button")]
         [TestCase("confirm-overlay"), TestCase("confirm-title"), TestCase("confirm-message")]
         [TestCase("confirm-accept"), TestCase("confirm-cancel")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);
@@ -57,6 +57,8 @@ namespace Triki.Tests
             Assert.IsTrue(root.Q("history-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("setup-panel").ClassListContains("hidden"));
             Assert.IsTrue(root.Q("confirm-overlay").ClassListContains("hidden"), "El diálogo empieza cerrado.");
+            Assert.IsTrue(root.Q("delete-history-button").ClassListContains("history-delete"), "Borrar registro usa el estilo compacto.");
+            Assert.IsNull(root.Q("delete-all-history-button"), "Ya no existe el botón de borrar todo.");
         }
 
         [Test]

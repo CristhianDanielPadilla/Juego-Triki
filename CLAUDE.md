@@ -42,7 +42,6 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   - Cada partida se anota en `Overall` y en la de su modo (`HistoryRecorder.Record`).
   - Borrar (`MatchHistory.Clear(section)`) solo vacia ese registro; los demas no cambian, por eso
     General puede no coincidir con la suma de los otros tras borrar.
-  - "Borrar todo el historico" (`ClearAll`) vacia los tres; se desactiva si `IsEmpty`.
 - UI del historico: `HistoryView` pinta las pestañas y emite `DeleteRequested`; `MainMenuController`
   pide confirmacion con `ConfirmDialog` (modal, foco en Cancelar, Escape cancela) y borra releyendo
   del disco. La tabla por color es la plantilla `UI/ColorStatsTable.uxml`, instanciada dos veces:
@@ -124,7 +123,8 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
     historico a la nueva carpeta de datos.
   - `v0.2.0`: historico con pestañas General / Contra la IA / Dos jugadores y borrado por
     registro con confirmacion (formato de archivo 2).
-  - `v0.2.1`: boton para borrar todo el historico, con confirmacion.
+  - `v0.2.1`: boton "Eliminar registro" mas compacto. La etiqueta se rehizo antes de publicar: la
+    primera `v0.2.1` (nunca publicada) incluia un boton de "borrar todo" que se descarto.
 - Para una release: tests en verde en `main` -> build de Windows desde la etiqueta -> zip sin la
   carpeta "DontShip" -> `gh release create vX.Y.Z <zip> --notes-file <notas>`.
 

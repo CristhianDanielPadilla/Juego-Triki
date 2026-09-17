@@ -158,30 +158,19 @@
     opacity: 0.35;
 }
 
+/* Botón de borrar registro: secundario, centrado y ajustado a su texto (no a todo el ancho). */
+.history-delete {
+    align-self: center;
+    height: 52px;
+    margin: 16px 0 4px 0;
+    padding: 0 24px;
+    font-size: 24px;
+    border-radius: 12px;
+}
+
 .menu-button--danger {
     background-color: rgb(200, 60, 55);
     -unity-font-style: bold;
-}
-
-.menu-button--danger:disabled {
-    opacity: 0.35;
-}
-
-/* Botones de borrado, uno junto al otro: textos largos pasan a dos líneas. */
-.history-actions {
-    flex-direction: row;
-    margin-top: 20px;
-}
-
-.history-action {
-    flex-grow: 1;
-    flex-basis: 0;
-    height: auto;
-    min-height: 72px;
-    margin: 0 6px;
-    padding: 8px 12px;
-    font-size: 28px;
-    white-space: normal;
 }
 
 .menu-button--danger:hover,

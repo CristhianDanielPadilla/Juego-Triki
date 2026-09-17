@@ -42,10 +42,6 @@ namespace Triki.Core
             }
         }
 
-        /// <summary>Ningún registro tiene partidas.</summary>
-        public bool IsEmpty => Overall.GamesPlayed == 0 && VsAi.GamesPlayed == 0 && TwoPlayer.GamesPlayed == 0;
-
-        /// <summary>Borra los tres registros.</summary>
         public void ClearAll()
         {
             Overall.Clear();
