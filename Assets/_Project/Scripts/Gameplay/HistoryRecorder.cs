@@ -22,12 +22,14 @@ namespace Triki.Gameplay
                 return;
             }
 
+            // El color es el del humano: así el histórico puede decir cómo te va con cada uno.
+            var color = settings.HumanPlayer;
             if (winner == Player.None)
-                history.VsAi.RecordDraw(settings.Difficulty);
-            else if (winner == settings.HumanPlayer)
-                history.VsAi.RecordWin(settings.Difficulty);
+                history.VsAi.RecordDraw(settings.Difficulty, color);
+            else if (winner == color)
+                history.VsAi.RecordWin(settings.Difficulty, color);
             else
-                history.VsAi.RecordLoss(settings.Difficulty);
+                history.VsAi.RecordLoss(settings.Difficulty, color);
         }
 
         private static void RecordByColor(MatchStats stats, Player winner)
