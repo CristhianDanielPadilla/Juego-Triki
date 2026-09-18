@@ -17,8 +17,14 @@ namespace Triki.Gameplay
         /// <summary>Compañía con la que se publicó v0.1.0; su carpeta de datos era otra.</summary>
         public const string LegacyCompanyName = "DefaultCompany";
 
-        /// <summary>Formato del archivo: 1 = v0.1.x (sin modo de juego), 2 = separado por modo.</summary>
-        private const int CurrentVersion = 2;
+        /// <summary>
+        /// Formato del archivo: 1 = v0.1.x (sin modo de juego), 2 = separado por modo,
+        /// 3 = las partidas contra la IA guardan ademas el color del humano.
+        /// </summary>
+        private const int CurrentVersion = 3;
+
+        /// <summary>Formato que empezó a separar por modo de juego.</summary>
+        private const int ByModeVersion = 2;
 
         public StatsRepository()
             : this(
@@ -73,7 +79,7 @@ namespace Triki.Gameplay
                 if (data == null)
                     throw new FormatException("Archivo vacío.");
 
-                if (data.version < CurrentVersion)
+                if (data.version < ByModeVersion)
                 {
                     // v1 (v0.1.x): campos planos sin modo de juego -> solo al registro general.
                     history.Overall.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
@@ -82,9 +88,21 @@ namespace Triki.Gameplay
                 {
                     Restore(history.TwoPlayer, data.twoPlayer);
                     Restore(history.Overall, data.overall);
-                    Restore(history.VsAi, AiDifficulty.Easy, data.vsAi?.easy);
-                    Restore(history.VsAi, AiDifficulty.Normal, data.vsAi?.normal);
-                    Restore(history.VsAi, AiDifficulty.Hard, data.vsAi?.hard);
+
+                    if (data.version < CurrentVersion)
+                    {
+                        // v2: la partida contra la IA no guardaba el color del humano. Se conservan
+                        // los totales en el hueco "sin color", que cuenta pero no se reparte.
+                        RestoreColorless(history.VsAi, AiDifficulty.Easy, data.vsAi?.easy);
+                        RestoreColorless(history.VsAi, AiDifficulty.Normal, data.vsAi?.normal);
+                        RestoreColorless(history.VsAi, AiDifficulty.Hard, data.vsAi?.hard);
+                    }
+                    else
+                    {
+                        Restore(history.VsAi, AiDifficulty.Easy, data.vsAiByColor?.easy);
+                        Restore(history.VsAi, AiDifficulty.Normal, data.vsAiByColor?.normal);
+                        Restore(history.VsAi, AiDifficulty.Hard, data.vsAiByColor?.hard);
+                    }
                 }
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is FormatException)
@@ -126,7 +144,16 @@ namespace Triki.Gameplay
                 version = CurrentVersion,
                 twoPlayer = ToData(history.TwoPlayer),
                 overall = ToData(history.Overall),
+
+                // Totales por dificultad, sin color. No los lee esta version: estan para que
+                // v0.2.x y v0.3.0 sigan mostrando el registro contra la IA si abren el archivo.
                 vsAi = new AiStatsData
+                {
+                    easy = ToTotals(history.VsAi, AiDifficulty.Easy),
+                    normal = ToTotals(history.VsAi, AiDifficulty.Normal),
+                    hard = ToTotals(history.VsAi, AiDifficulty.Hard),
+                },
+                vsAiByColor = new AiColorStatsData
                 {
                     easy = ToData(history.VsAi, AiDifficulty.Easy),
                     normal = ToData(history.VsAi, AiDifficulty.Normal),
@@ -162,10 +189,26 @@ namespace Triki.Gameplay
                 stats.Restore(data.gamesPlayed, data.draws, data.playerOneWins, data.playerOneLosses, data.playerTwoWins, data.playerTwoLosses);
         }
 
-        private static void Restore(AiMatchStats stats, AiDifficulty difficulty, ResultData data)
+        private static void Restore(AiMatchStats stats, AiDifficulty difficulty, ByColorData data)
+        {
+            if (data == null)
+                return;
+            RestoreColor(stats, difficulty, Player.One, data.red);
+            RestoreColor(stats, difficulty, Player.Two, data.blue);
+            RestoreColor(stats, difficulty, Player.None, data.colorless);
+        }
+
+        private static void RestoreColor(AiMatchStats stats, AiDifficulty difficulty, Player color, ResultData data)
         {
             if (data != null)
-                stats.Restore(difficulty, data.wins, data.losses, data.draws);
+                stats.Restore(difficulty, color, data.wins, data.losses, data.draws);
+        }
+
+        /// <summary>Un archivo v2 no sabía de qué color iba el humano: todo al hueco sin color.</summary>
+        private static void RestoreColorless(AiMatchStats stats, AiDifficulty difficulty, ResultData data)
+        {
+            if (data != null)
+                stats.Restore(difficulty, Player.None, data.wins, data.losses, data.draws);
         }
 
         private static ColorStatsData ToData(MatchStats stats)
@@ -181,7 +224,27 @@ namespace Triki.Gameplay
             };
         }
 
-        private static ResultData ToData(AiMatchStats stats, AiDifficulty difficulty)
+        private static ByColorData ToData(AiMatchStats stats, AiDifficulty difficulty)
+        {
+            return new ByColorData
+            {
+                red = ToData(stats, difficulty, Player.One),
+                blue = ToData(stats, difficulty, Player.Two),
+                colorless = ToData(stats, difficulty, Player.None),
+            };
+        }
+
+        private static ResultData ToData(AiMatchStats stats, AiDifficulty difficulty, Player color)
+        {
+            return new ResultData
+            {
+                wins = stats.GetWins(difficulty, color),
+                losses = stats.GetLosses(difficulty, color),
+                draws = stats.GetDraws(difficulty, color),
+            };
+        }
+
+        private static ResultData ToTotals(AiMatchStats stats, AiDifficulty difficulty)
         {
             return new ResultData
             {
@@ -191,15 +254,21 @@ namespace Triki.Gameplay
             };
         }
 
-        // Formato del archivo. v1 (v0.1.x) solo tenía los campos planos de abajo; v2 separa por modo.
+        // Formato del archivo. v1 (v0.1.x) solo tenía los campos planos de abajo; v2 separa por modo;
+        // v3 añade el color del humano en las partidas contra la IA.
         // Un archivo sin "version" se trata como v1.
+        // Cada version conserva los campos de la anterior: los viejos se leen al migrar, y se siguen
+        // escribiendo para que una version anterior del juego no se quede sin datos al abrir el archivo.
         [Serializable]
         internal sealed class HistoryData
         {
             public int version;
             public ColorStatsData twoPlayer;
-            public AiStatsData vsAi;
+            public AiColorStatsData vsAiByColor;
             public ColorStatsData overall;
+
+            // v2 (lectura al migrar; escritura solo para versiones anteriores del juego).
+            public AiStatsData vsAi;
 
             // Solo v1 (lectura).
             public int gamesPlayed;
@@ -221,12 +290,32 @@ namespace Triki.Gameplay
             public int playerTwoLosses;
         }
 
+        /// <summary>v2: un solo resultado por dificultad, sin color.</summary>
         [Serializable]
         internal sealed class AiStatsData
         {
             public ResultData easy;
             public ResultData normal;
             public ResultData hard;
+        }
+
+        /// <summary>v3: cada dificultad, repartida por el color que llevaba el humano.</summary>
+        [Serializable]
+        internal sealed class AiColorStatsData
+        {
+            public ByColorData easy;
+            public ByColorData normal;
+            public ByColorData hard;
+        }
+
+        [Serializable]
+        internal sealed class ByColorData
+        {
+            public ResultData red;
+            public ResultData blue;
+
+            /// <summary>Partidas heredadas de v2, sin color conocido.</summary>
+            public ResultData colorless;
         }
 
         [Serializable]
