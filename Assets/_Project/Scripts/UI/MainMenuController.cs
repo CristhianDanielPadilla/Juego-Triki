@@ -97,6 +97,8 @@ namespace Triki.UI
             _colorOne.RegisterCallback<ClickEvent, Player>(HandleColorClicked, Player.One);
             _colorTwo.RegisterCallback<ClickEvent, Player>(HandleColorClicked, Player.Two);
 
+            _quitButton.EnableInClassList(HiddenClass, !SceneNavigator.CanQuitApplication);
+
             AudioPreferences.Apply();
             RefreshSoundButton();
             ShowMain();

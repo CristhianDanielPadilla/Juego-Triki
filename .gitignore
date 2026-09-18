@@ -115,3 +115,6 @@ InitTestScene*.unity*
 
 # Resultados de .github/scripts/run-editmode-tests.ps1
 /test-results/
+
+# La build de WebGL deja aqui el codigo que genera Burst; no es fuente.
+/Data/
