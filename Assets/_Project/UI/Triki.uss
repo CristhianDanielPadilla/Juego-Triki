@@ -44,6 +44,12 @@
     border-radius: 24px;
 }
 
+/* El historico necesita mas ancho: el cuadro de la IA tiene siete columnas. 860 cabe de sobra
+   en vertical (ahi el panel mide unas 966 unidades). Va despues de .panel para poder ganarle. */
+.panel--wide {
+    min-width: 860px;
+}
+
 .title {
     font-size: 140px;
     -unity-font-style: bold;
@@ -258,6 +264,40 @@
     flex-grow: 1.4;
     -unity-text-align: middle-left;
     -unity-font-style: bold;
+}
+
+/* Separa los dos grupos de columnas del cuadro de la IA. */
+.cell--divider {
+    border-left-width: 1px;
+    border-color: var(--color-panel-border);
+}
+
+/* ---------- Cuadro de "Contra la IA" ---------- */
+
+/* Siete columnas: la dificultad y, por cada color, victorias/derrotas/empates.
+   Numeros mas pequenos que en las otras tablas para que quepan tambien en vertical. */
+.ai-table .cell {
+    font-size: 32px;
+}
+
+.ai-table .stats-table__header .cell {
+    font-size: 22px;
+}
+
+/* Cada titulo de color cubre sus tres columnas: 3 = tres veces el ancho de una celda. */
+.ai-table .stats-table__header .ai-group {
+    flex-grow: 3;
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.table-note {
+    font-size: 22px;
+    color: var(--color-muted);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin: -16px 0 24px 0;
 }
 
 /* ---------- HUD de partida ---------- */
