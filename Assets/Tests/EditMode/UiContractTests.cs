@@ -21,17 +21,19 @@ namespace Triki.Tests
         [TestCase("tab-general"), TestCase("tab-ai"), TestCase("tab-local")]
         [TestCase("history-general"), TestCase("history-ai"), TestCase("history-local")]
         [TestCase("ai-games"), TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
+        [TestCase("ai-colorless")]
         [TestCase("delete-history-button")]
         [TestCase("confirm-overlay"), TestCase("confirm-title"), TestCase("confirm-message")]
         [TestCase("confirm-accept"), TestCase("confirm-cancel")]
         public void MainMenu_HasElement(string elementName) => AssertHasElement("MainMenu.uxml", elementName);
 
-        // HistoryView busca estos nombres dentro de cada fila de dificultad.
+        // HistoryView busca estos nombres dentro de cada fila de dificultad: tres resultados por
+        // cada color con el que pudo jugar el humano ("one" = Rojo, "two" = Azul).
         [TestCase("ai-easy"), TestCase("ai-normal"), TestCase("ai-hard")]
-        public void AiRow_HasResultLabels(string row)
+        public void AiRow_HasResultLabelsForBothColours(string row)
         {
             var element = Clone("MainMenu.uxml").Q(row);
-            foreach (var name in new[] { "wins", "losses", "draws" })
+            foreach (var name in new[] { "one-wins", "one-losses", "one-draws", "two-wins", "two-losses", "two-draws" })
                 Assert.IsNotNull(element.Q<Label>(name), $"{row} no tiene '{name}'.");
         }
 

@@ -47,10 +47,10 @@ namespace Triki.Tests
             history.TwoPlayer.RecordWin(Player.One);
             history.TwoPlayer.RecordWin(Player.Two);
             history.TwoPlayer.RecordDraw();
-            history.VsAi.RecordWin(AiDifficulty.Easy);
-            history.VsAi.RecordLoss(AiDifficulty.Hard);
-            history.VsAi.RecordLoss(AiDifficulty.Hard);
-            history.VsAi.RecordDraw(AiDifficulty.Normal);
+            history.VsAi.RecordWin(AiDifficulty.Easy, Player.One);
+            history.VsAi.RecordLoss(AiDifficulty.Hard, Player.Two);
+            history.VsAi.RecordLoss(AiDifficulty.Hard, Player.Two);
+            history.VsAi.RecordDraw(AiDifficulty.Normal, Player.One);
             history.Overall.Restore(5, 1, 2, 2, 2, 2);
 
             _repository.Save(history);
@@ -73,21 +73,80 @@ namespace Triki.Tests
         }
 
         [Test]
-        public void Save_WritesFormatVersion2()
+        public void Save_WritesFormatVersion3()
         {
             _repository.Save(new MatchHistory());
 
-            StringAssert.Contains("\"version\": 2", File.ReadAllText(_repository.FilePath));
+            StringAssert.Contains("\"version\": 3", File.ReadAllText(_repository.FilePath));
+        }
+
+        [Test]
+        public void Save_AlsoWritesAiTotalsWithoutColour_SoOlderVersionsKeepTheirData()
+        {
+            // v0.2.x y v0.3.0 leen "vsAi" (totales por dificultad). Si dejáramos de escribirlo,
+            // al abrir el archivo con una versión anterior el registro contra la IA saldría a cero.
+            var history = new MatchHistory();
+            history.VsAi.RecordWin(AiDifficulty.Hard, Player.One);
+            history.VsAi.RecordWin(AiDifficulty.Hard, Player.Two);
+            history.VsAi.RecordLoss(AiDifficulty.Hard, Player.Two);
+
+            _repository.Save(history);
+            var data = JsonUtility.FromJson<StatsRepository.HistoryData>(File.ReadAllText(_repository.FilePath));
+
+            Assert.AreEqual(2, data.vsAi.hard.wins, "El total suma los dos colores.");
+            Assert.AreEqual(1, data.vsAi.hard.losses);
+            Assert.AreEqual(1, data.vsAiByColor.hard.red.wins);
+            Assert.AreEqual(1, data.vsAiByColor.hard.blue.wins);
+            Assert.AreEqual(1, data.vsAiByColor.hard.blue.losses);
+        }
+
+        [Test]
+        public void Load_V2File_KeepsAiGamesAsColourless()
+        {
+            // v0.3.0 y anteriores no guardaban de qué color iba el humano. Esas partidas no se
+            // pierden: cuentan en los totales, pero no se pueden repartir entre Rojo y Azul.
+            WriteFile(_repository.FilePath,
+                "{\"version\":2,\"vsAi\":{\"hard\":{\"wins\":2,\"losses\":5,\"draws\":1}}," +
+                "\"overall\":{\"gamesPlayed\":8,\"playerOneWins\":2,\"playerTwoWins\":5,\"draws\":1}}");
+
+            var history = _repository.Load();
+
+            Assert.AreEqual(8, history.VsAi.GetGamesPlayed(AiDifficulty.Hard));
+            Assert.AreEqual(2, history.VsAi.GetWins(AiDifficulty.Hard));
+            Assert.AreEqual(8, history.VsAi.ColorlessGames);
+            Assert.AreEqual(0, history.VsAi.GetWins(AiDifficulty.Hard, Player.One));
+            Assert.AreEqual(0, history.VsAi.GetWins(AiDifficulty.Hard, Player.Two));
+            Assert.AreEqual(8, history.Overall.GamesPlayed, "El registro general no se toca.");
+        }
+
+        [Test]
+        public void SaveThenLoad_RoundTripsTheColourOfEachAiGame()
+        {
+            var history = new MatchHistory();
+            history.VsAi.RecordWin(AiDifficulty.Easy, Player.One);
+            history.VsAi.RecordLoss(AiDifficulty.Easy, Player.Two);
+            history.VsAi.RecordDraw(AiDifficulty.Hard, Player.Two);
+            history.VsAi.Restore(AiDifficulty.Normal, Player.None, 1, 0, 0);
+
+            _repository.Save(history);
+            var loaded = _repository.Load();
+
+            Assert.AreEqual(1, loaded.VsAi.GetWins(AiDifficulty.Easy, Player.One));
+            Assert.AreEqual(0, loaded.VsAi.GetWins(AiDifficulty.Easy, Player.Two));
+            Assert.AreEqual(1, loaded.VsAi.GetLosses(AiDifficulty.Easy, Player.Two));
+            Assert.AreEqual(1, loaded.VsAi.GetDraws(AiDifficulty.Hard, Player.Two));
+            Assert.AreEqual(1, loaded.VsAi.ColorlessGames, "Las partidas sin color se conservan.");
+            Assert.AreEqual(4, loaded.VsAi.GamesPlayed);
         }
 
         [Test]
         public void Save_OverwritesPreviousFile()
         {
             var history = new MatchHistory();
-            history.VsAi.RecordWin(AiDifficulty.Normal);
+            history.VsAi.RecordWin(AiDifficulty.Normal, Player.Two);
             _repository.Save(history);
 
-            history.VsAi.RecordWin(AiDifficulty.Normal);
+            history.VsAi.RecordWin(AiDifficulty.Normal, Player.Two);
             _repository.Save(history);
 
             Assert.AreEqual(2, _repository.Load().VsAi.GetWins(AiDifficulty.Normal));
@@ -157,7 +216,7 @@ namespace Triki.Tests
         {
             WriteFile(_repository.FilePath, V1File);
             var history = _repository.Load();
-            history.VsAi.RecordWin(AiDifficulty.Easy);
+            history.VsAi.RecordWin(AiDifficulty.Easy, Player.One);
 
             _repository.Save(history);
             var reloaded = _repository.Load();
