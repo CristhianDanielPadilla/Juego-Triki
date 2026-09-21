@@ -15,6 +15,7 @@ Assets/
       Core/            Triki.Core     - logica pura, SIN UnityEngine (noEngineReferences)
       Gameplay/        Triki.Gameplay - MonoBehaviours, input, tablero, guardado del historico
       UI/              Triki.UI       - menu, HUD, navegacion entre escenas
+      Editor/          Triki.Editor   - solo editor: builds por linea de comandos
     UI/                UI Toolkit: UXML, Triki.uss (paleta), TrikiTheme.tss, TrikiPanelSettings
   Tests/EditMode/      Triki.Tests.EditMode - NUnit sobre Core, persistencia y contrato UXML
   Settings/            URP (RP Assets + Renderer 2D), Volume Profile e InputSystem_Actions
@@ -111,6 +112,16 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   - No distribuir la carpeta `*_BackUpThisFolder_ButDontShipItWithYourGame`.
   - Al compilar, Unity reescribe `PC_RPAsset` (filtrado de variantes de shader) y otros settings:
     commitear esos cambios. Si activa `UnityConnectSettings` (`m_Enabled: 1`), revertirlo.
+- Build de WebGL (Unity cerrado). Unity no trae un flag para WebGL, asi que va por
+  `-executeMethod` contra `Triki.Editor.BuildCommands` (assembly `Triki.Editor`, solo editor):
+  `Unity.exe -batchmode -quit -nographics -projectPath <ruta> -buildTarget WebGL -executeMethod Triki.Editor.BuildCommands.BuildWebGL -trikiOutput <carpeta> -logFile <log>`
+  - Tambien esta en el menu del editor: **Triki > Compilar WebGL**.
+  - `BuildCommands.ConfigureWebGL` deja los ajustes que hacen falta para un hosting estatico
+    (GitHub Pages, itch.io), donde no se pueden tocar las cabeceras: sobre todo
+    **`decompressionFallback = true`**. Sin el, el navegador no entiende los archivos comprimidos
+    salvo que el servidor mande `Content-Encoding`, y el juego se queda en la pantalla de carga.
+  - El boton "Salir" no se dibuja en WebGL (`SceneNavigator.CanQuitApplication`): en el navegador
+    `Application.Quit` no hace nada.
 - El proyecto NO se puede editar por fuera mientras el editor de Unity esta abierto:
   `ProjectSettings/*.asset` y las escenas los reescribe Unity al guardar/cerrar.
 
