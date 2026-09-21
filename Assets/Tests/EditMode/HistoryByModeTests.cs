@@ -15,10 +15,10 @@ namespace Triki.Tests
         {
             var stats = new AiMatchStats();
 
-            stats.RecordWin(AiDifficulty.Easy);
-            stats.RecordWin(AiDifficulty.Easy);
-            stats.RecordLoss(AiDifficulty.Hard);
-            stats.RecordDraw(AiDifficulty.Normal);
+            stats.RecordWin(AiDifficulty.Easy, Player.One);
+            stats.RecordWin(AiDifficulty.Easy, Player.One);
+            stats.RecordLoss(AiDifficulty.Hard, Player.Two);
+            stats.RecordDraw(AiDifficulty.Normal, Player.One);
 
             Assert.AreEqual(2, stats.GetWins(AiDifficulty.Easy));
             Assert.AreEqual(0, stats.GetWins(AiDifficulty.Hard));
@@ -29,15 +29,59 @@ namespace Triki.Tests
         }
 
         [Test]
+        public void Records_AreSeparatedByTheColourTheHumanPlayed()
+        {
+            var stats = new AiMatchStats();
+
+            stats.RecordWin(AiDifficulty.Normal, Player.One);
+            stats.RecordLoss(AiDifficulty.Normal, Player.One);
+            stats.RecordLoss(AiDifficulty.Normal, Player.Two);
+            stats.RecordDraw(AiDifficulty.Normal, Player.Two);
+
+            Assert.AreEqual(1, stats.GetWins(AiDifficulty.Normal, Player.One));
+            Assert.AreEqual(1, stats.GetLosses(AiDifficulty.Normal, Player.One));
+            Assert.AreEqual(0, stats.GetDraws(AiDifficulty.Normal, Player.One));
+            Assert.AreEqual(2, stats.GetGamesPlayed(AiDifficulty.Normal, Player.One));
+
+            Assert.AreEqual(0, stats.GetWins(AiDifficulty.Normal, Player.Two));
+            Assert.AreEqual(1, stats.GetLosses(AiDifficulty.Normal, Player.Two));
+            Assert.AreEqual(1, stats.GetDraws(AiDifficulty.Normal, Player.Two));
+
+            Assert.AreEqual(1, stats.GetWins(AiDifficulty.Normal), "El total suma los dos colores.");
+            Assert.AreEqual(2, stats.GetLosses(AiDifficulty.Normal));
+            Assert.AreEqual(4, stats.GamesPlayed);
+            Assert.AreEqual(0, stats.ColorlessGames);
+        }
+
+        [Test]
+        public void ColorlessGames_CountInTheTotalButInNeitherColumn()
+        {
+            var stats = new AiMatchStats();
+            stats.RecordWin(AiDifficulty.Easy, Player.One);
+
+            // Así entran las partidas de v0.3.0 y anteriores, que no guardaban el color.
+            stats.Restore(AiDifficulty.Easy, Player.None, 2, 3, 1);
+
+            Assert.AreEqual(6, stats.ColorlessGames, "2 victorias + 3 derrotas + 1 empate.");
+            Assert.AreEqual(7, stats.GetGamesPlayed(AiDifficulty.Easy), "La de Rojo y las 6 sin color.");
+            Assert.AreEqual(3, stats.GetWins(AiDifficulty.Easy), "1 de Rojo + 2 sin color.");
+            Assert.AreEqual(1, stats.GetWins(AiDifficulty.Easy, Player.One));
+            Assert.AreEqual(0, stats.GetWins(AiDifficulty.Easy, Player.Two));
+        }
+
+        [Test]
         public void Restore_And_Clear()
         {
             var stats = new AiMatchStats();
 
-            stats.Restore(AiDifficulty.Hard, 1, 5, 2);
-            Assert.AreEqual(8, stats.GetGamesPlayed(AiDifficulty.Hard));
+            stats.Restore(AiDifficulty.Hard, Player.One, 1, 5, 2);
+            stats.Restore(AiDifficulty.Hard, Player.Two, 0, 1, 0);
+            Assert.AreEqual(9, stats.GetGamesPlayed(AiDifficulty.Hard));
+            Assert.AreEqual(8, stats.GetGamesPlayed(AiDifficulty.Hard, Player.One));
 
             stats.Clear();
             Assert.AreEqual(0, stats.GamesPlayed);
+            Assert.AreEqual(0, stats.GetGamesPlayed(AiDifficulty.Hard, Player.One));
         }
 
         [Test]
@@ -45,8 +89,9 @@ namespace Triki.Tests
         {
             var stats = new AiMatchStats();
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => stats.Restore(AiDifficulty.Easy, -1, 0, 0));
-            Assert.Throws<ArgumentOutOfRangeException>(() => stats.RecordWin((AiDifficulty)7));
+            Assert.Throws<ArgumentOutOfRangeException>(() => stats.Restore(AiDifficulty.Easy, Player.One, -1, 0, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => stats.RecordWin((AiDifficulty)7, Player.One));
+            Assert.Throws<ArgumentOutOfRangeException>(() => stats.RecordWin(AiDifficulty.Easy, (Player)9));
         }
     }
 
@@ -59,8 +104,8 @@ namespace Triki.Tests
         {
             _history = new MatchHistory();
             _history.Overall.RecordWin(Player.One);
-            _history.VsAi.RecordWin(AiDifficulty.Easy);
-            _history.VsAi.RecordLoss(AiDifficulty.Hard);
+            _history.VsAi.RecordWin(AiDifficulty.Easy, Player.One);
+            _history.VsAi.RecordLoss(AiDifficulty.Hard, Player.Two);
             _history.TwoPlayer.RecordDraw();
         }
 
@@ -140,6 +185,11 @@ namespace Triki.Tests
             Assert.AreEqual(humanWins ? 0 : 1, _history.VsAi.GetLosses(AiDifficulty.Normal));
             Assert.AreEqual(1, _history.Overall.GetWins(winner), "El general registra el color ganador.");
             Assert.AreEqual(0, _history.TwoPlayer.GamesPlayed);
+
+            // Se anota bajo el color del humano, no bajo el del ganador.
+            Assert.AreEqual(1, _history.VsAi.GetGamesPlayed(AiDifficulty.Normal, human));
+            Assert.AreEqual(0, _history.VsAi.GetGamesPlayed(AiDifficulty.Normal, human.Opponent()));
+            Assert.AreEqual(0, _history.VsAi.ColorlessGames);
         }
 
         [Test]
@@ -180,10 +230,15 @@ namespace Triki.Tests
             Assert.AreEqual("Rojo", general.Q<Label>("player-one-name").text);
 
             Assert.AreEqual("11", _panel.Q("history-ai").Q<Label>("ai-games").text);
+
+            // SampleHistory anota esas 11 partidas jugando de Rojo: la columna de Azul queda a cero.
             var hard = _panel.Q("ai-hard");
-            Assert.AreEqual("3", hard.Q<Label>("wins").text);
-            Assert.AreEqual("7", hard.Q<Label>("losses").text);
-            Assert.AreEqual("1", hard.Q<Label>("draws").text);
+            Assert.AreEqual("3", hard.Q<Label>("one-wins").text);
+            Assert.AreEqual("7", hard.Q<Label>("one-losses").text);
+            Assert.AreEqual("1", hard.Q<Label>("one-draws").text);
+            Assert.AreEqual("0", hard.Q<Label>("two-wins").text);
+            Assert.AreEqual("0", hard.Q<Label>("two-losses").text);
+            Assert.AreEqual("0", hard.Q<Label>("two-draws").text);
 
             var local = _panel.Q("history-local");
             Assert.AreEqual("0", local.Q<Label>("games").text);
@@ -266,11 +321,40 @@ namespace Triki.Tests
             Assert.AreEqual(1, runs);
         }
 
+        [Test]
+        public void ColorlessNote_OnlyShowsWhenThereAreOldGames()
+        {
+            Assert.IsNull(HistoryView.GetColorlessNote(0), "Sin partidas viejas no se dice nada.");
+            Assert.IsNull(HistoryView.GetColorlessNote(-3));
+            StringAssert.StartsWith("1 partida anterior", HistoryView.GetColorlessNote(1));
+            StringAssert.StartsWith("4 partidas anteriores", HistoryView.GetColorlessNote(4));
+        }
+
+        [Test]
+        public void ColorlessNote_IsHiddenForAHistoryWithoutOldGames()
+        {
+            _view.Show(SampleHistory());
+
+            Assert.IsTrue(IsHidden("ai-colorless"));
+        }
+
+        [Test]
+        public void ColorlessNote_AppearsWhenTheHistoryHasOldGames()
+        {
+            var history = SampleHistory();
+            history.VsAi.Restore(AiDifficulty.Normal, Player.None, 2, 0, 0);
+
+            _view.Show(history);
+
+            Assert.IsFalse(IsHidden("ai-colorless"));
+            StringAssert.Contains("2 partidas anteriores", _panel.Q<Label>("ai-colorless").text);
+        }
+
         private static MatchHistory SampleHistory()
         {
             var history = new MatchHistory();
             history.Overall.Restore(3, 0, 2, 1, 1, 2);
-            history.VsAi.Restore(AiDifficulty.Hard, 3, 7, 1);
+            history.VsAi.Restore(AiDifficulty.Hard, Player.One, 3, 7, 1);
             return history;
         }
 

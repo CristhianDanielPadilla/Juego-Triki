@@ -35,7 +35,7 @@
             <ui:Button name="setup-back-button" text="Volver" class="menu-button" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="history-panel" class="panel hidden">
+        <ui:VisualElement name="history-panel" class="panel panel--wide hidden">
             <ui:Label text="Histórico de partidas" class="panel-title" />
             <ui:VisualElement class="segmented history-tabs">
                 <ui:Button name="tab-general" text="General" class="segment" />
@@ -52,32 +52,52 @@
                     <ui:Label text="Partidas jugadas" class="stat-total__name" />
                     <ui:Label name="ai-games" text="0" class="stat-total__value" />
                 </ui:VisualElement>
-                <ui:VisualElement class="stats-table">
+                <!-- Cabecera en dos lineas: arriba el color que llevabas, abajo el resultado. -->
+                <ui:VisualElement class="stats-table ai-table">
+                    <ui:VisualElement class="stats-table__row stats-table__header">
+                        <ui:Label text="" class="cell cell--name" />
+                        <ui:Label text="Jugando de Rojo" class="cell ai-group player-one" />
+                        <ui:Label text="Jugando de Azul" class="cell ai-group player-two cell--divider" />
+                    </ui:VisualElement>
                     <ui:VisualElement class="stats-table__row stats-table__header">
                         <ui:Label text="Dificultad" class="cell cell--name" />
-                        <ui:Label text="Victorias" class="cell" />
-                        <ui:Label text="Derrotas" class="cell" />
-                        <ui:Label text="Empates" class="cell" />
+                        <ui:Label text="Vict." class="cell" />
+                        <ui:Label text="Derr." class="cell" />
+                        <ui:Label text="Emp." class="cell" />
+                        <ui:Label text="Vict." class="cell cell--divider" />
+                        <ui:Label text="Derr." class="cell" />
+                        <ui:Label text="Emp." class="cell" />
                     </ui:VisualElement>
                     <ui:VisualElement name="ai-easy" class="stats-table__row">
                         <ui:Label text="Fácil" class="cell cell--name" />
-                        <ui:Label name="wins" text="0" class="cell" />
-                        <ui:Label name="losses" text="0" class="cell" />
-                        <ui:Label name="draws" text="0" class="cell" />
+                        <ui:Label name="one-wins" text="0" class="cell" />
+                        <ui:Label name="one-losses" text="0" class="cell" />
+                        <ui:Label name="one-draws" text="0" class="cell" />
+                        <ui:Label name="two-wins" text="0" class="cell cell--divider" />
+                        <ui:Label name="two-losses" text="0" class="cell" />
+                        <ui:Label name="two-draws" text="0" class="cell" />
                     </ui:VisualElement>
                     <ui:VisualElement name="ai-normal" class="stats-table__row">
                         <ui:Label text="Normal" class="cell cell--name" />
-                        <ui:Label name="wins" text="0" class="cell" />
-                        <ui:Label name="losses" text="0" class="cell" />
-                        <ui:Label name="draws" text="0" class="cell" />
+                        <ui:Label name="one-wins" text="0" class="cell" />
+                        <ui:Label name="one-losses" text="0" class="cell" />
+                        <ui:Label name="one-draws" text="0" class="cell" />
+                        <ui:Label name="two-wins" text="0" class="cell cell--divider" />
+                        <ui:Label name="two-losses" text="0" class="cell" />
+                        <ui:Label name="two-draws" text="0" class="cell" />
                     </ui:VisualElement>
                     <ui:VisualElement name="ai-hard" class="stats-table__row">
                         <ui:Label text="Difícil" class="cell cell--name" />
-                        <ui:Label name="wins" text="0" class="cell" />
-                        <ui:Label name="losses" text="0" class="cell" />
-                        <ui:Label name="draws" text="0" class="cell" />
+                        <ui:Label name="one-wins" text="0" class="cell" />
+                        <ui:Label name="one-losses" text="0" class="cell" />
+                        <ui:Label name="one-draws" text="0" class="cell" />
+                        <ui:Label name="two-wins" text="0" class="cell cell--divider" />
+                        <ui:Label name="two-losses" text="0" class="cell" />
+                        <ui:Label name="two-draws" text="0" class="cell" />
                     </ui:VisualElement>
                 </ui:VisualElement>
+                <!-- Solo se ve si hay partidas de v0.3.0 o anterior, que no guardaban el color. -->
+                <ui:Label name="ai-colorless" text="" class="table-note hidden" />
             </ui:VisualElement>
 
             <!-- Dos jugadores: por color. -->

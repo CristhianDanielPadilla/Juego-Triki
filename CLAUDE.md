@@ -44,7 +44,12 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
 - Historico (`MatchHistory`, Core), tres registros **independientes** (`HistorySection`):
   - `Overall` (pestaña General): todas las partidas por color, sin importar el modo. Incluye las
     de v0.1.x, que no guardaban el modo.
-  - `VsAi` (`AiMatchStats`): victorias/derrotas/empates del humano por dificultad.
+  - `VsAi` (`AiMatchStats`): victorias/derrotas/empates del humano por dificultad **y por el color
+    que llevaba** (el cuadro tiene un grupo de columnas por color).
+    - Las partidas de v0.3.0 y anteriores no guardaban el color: se quedan en el hueco
+      `Player.None` (`ColorlessGames`). Cuentan en los totales por dificultad pero no en ninguna
+      de las dos columnas, asi que Rojo + Azul puede no dar el total. La pestaña lo avisa con
+      `ai-colorless`, que solo se ve si hay alguna. No inventar un reparto: el dato no existe.
   - `TwoPlayer` (`MatchStats`): por color.
   - Cada partida se anota en `Overall` y en la de su modo (`HistoryRecorder.Record`).
   - Borrar (`MatchHistory.Clear(section)`) solo vacia ese registro; los demas no cambian, por eso
@@ -54,8 +59,13 @@ Build Settings: `Menu` (indice 0) y `Game`. Los nombres de escena viven solo en
   del disco. La tabla por color es la plantilla `UI/ColorStatsTable.uxml`, instanciada dos veces:
   buscar sus nombres dentro de cada instancia, no en la raiz.
 - El historico se guarda en `Application.persistentDataPath/triki-stats.json` (`StatsRepository`),
-  formato `version: 2`. Un archivo sin version o con `version: 1` se lee solo a `Overall`.
-  En Windows: `%USERPROFILE%\AppData\LocalLow\CDCompany\Juego-Triki\`.
+  formato `version: 3`. En Windows: `%USERPROFILE%\AppData\LocalLow\CDCompany\Juego-Triki\`.
+  - Versiones del formato: 1 (v0.1.x, sin modo de juego) se lee solo a `Overall`; 2 (v0.2.0-v0.3.0)
+    trae el modo pero no el color de las partidas contra la IA, que entran como "sin color";
+    3 reparte esas partidas por color.
+  - **Cada version sigue escribiendo los campos de la anterior.** El bloque `vsAi` (totales por
+    dificultad, sin color) ya no se lee, pero se escribe para que v0.2.x y v0.3.0 no se encuentren
+    el registro contra la IA a cero al abrir un archivo nuevo. Al añadir un formato, hacer lo mismo.
   - Se guarda escribiendo un `.tmp` y reemplazando con `File.Replace`, que es atomico: si el juego
     muere a mitad, queda intacto el historico anterior. No volver a borrar y mover.
   - Compañia `CDCompany` e identificador `com.cdcompany.juegotriki` (Player Settings). v0.1.0 salio

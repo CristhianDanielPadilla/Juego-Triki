@@ -21,6 +21,7 @@ namespace Triki.UI
         private readonly VisualElement _aiPage;
         private readonly VisualElement _localPage;
         private readonly Label _aiGames;
+        private readonly Label _aiColorless;
         private readonly VisualElement _aiEasy;
         private readonly VisualElement _aiNormal;
         private readonly VisualElement _aiHard;
@@ -40,6 +41,7 @@ namespace Triki.UI
             _aiPage = panel.Q("history-ai");
             _localPage = panel.Q("history-local");
             _aiGames = _aiPage.Q<Label>("ai-games");
+            _aiColorless = _aiPage.Q<Label>("ai-colorless");
             _aiEasy = _aiPage.Q("ai-easy");
             _aiNormal = _aiPage.Q("ai-normal");
             _aiHard = _aiPage.Q("ai-hard");
@@ -116,6 +118,7 @@ namespace Triki.UI
             FillAiRow(_aiEasy, history.VsAi, AiDifficulty.Easy);
             FillAiRow(_aiNormal, history.VsAi, AiDifficulty.Normal);
             FillAiRow(_aiHard, history.VsAi, AiDifficulty.Hard);
+            FillColorlessNote(history.VsAi.ColorlessGames);
             FillColorTable(_localPage, history.TwoPlayer);
 
             Select(CurrentSection);
@@ -144,11 +147,38 @@ namespace Triki.UI
 
         private void HandleTabClicked(ClickEvent evt, HistorySection section) => Select(section);
 
+        /// <summary>
+        /// Texto del aviso de partidas sin color, o <c>null</c> si no hay ninguna y no se muestra.
+        /// Las partidas de v0.3.0 y anteriores cuentan en el total pero no se pueden repartir
+        /// entre Rojo y Azul, así que sin este aviso las dos columnas parecerían no cuadrar.
+        /// </summary>
+        public static string GetColorlessNote(int games)
+        {
+            if (games <= 0)
+                return null;
+            return games == 1
+                ? "1 partida anterior no guardó el color; cuenta en el total pero no en las columnas."
+                : $"{games} partidas anteriores no guardaron el color; cuentan en el total pero no en las columnas.";
+        }
+
+        private void FillColorlessNote(int games)
+        {
+            var note = GetColorlessNote(games);
+            _aiColorless.text = note ?? string.Empty;
+            _aiColorless.EnableInClassList(HiddenClass, note == null);
+        }
+
         private static void FillAiRow(VisualElement row, AiMatchStats stats, AiDifficulty difficulty)
         {
-            row.Q<Label>("wins").text = stats.GetWins(difficulty).ToString();
-            row.Q<Label>("losses").text = stats.GetLosses(difficulty).ToString();
-            row.Q<Label>("draws").text = stats.GetDraws(difficulty).ToString();
+            FillAiResults(row, "one", stats, difficulty, Player.One);
+            FillAiResults(row, "two", stats, difficulty, Player.Two);
+        }
+
+        private static void FillAiResults(VisualElement row, string prefix, AiMatchStats stats, AiDifficulty difficulty, Player color)
+        {
+            row.Q<Label>(prefix + "-wins").text = stats.GetWins(difficulty, color).ToString();
+            row.Q<Label>(prefix + "-losses").text = stats.GetLosses(difficulty, color).ToString();
+            row.Q<Label>(prefix + "-draws").text = stats.GetDraws(difficulty, color).ToString();
         }
 
         private static void FillColorTable(VisualElement table, MatchStats stats)
